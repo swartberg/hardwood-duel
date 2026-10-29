@@ -13,7 +13,9 @@ Open the address in two browsers. One player clicks **Create room** and shares t
 
 ## Hosting
 
-Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io, a VPS). Upload the folder, run `npm install` and `npm start`, and make sure the host passes the `PORT` environment variable. Behind HTTPS the page connects with `wss://` on its own.
+Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io, a VPS).
+
+**Render:** `render.yaml` describes the service. New service: in Render choose **New → Blueprint**, pick this repo, and apply. Existing service: make sure it deploys from `main` with build command `npm install` and start command `npm start`; with auto-deploy on, every push to `main` redeploys. Upload the folder, run `npm install` and `npm start`, and make sure the host passes the `PORT` environment variable. Behind HTTPS the page connects with `wss://` on its own.
 
 ## Files
 
