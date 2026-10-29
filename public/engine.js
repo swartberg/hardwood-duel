@@ -59,8 +59,10 @@
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
   const BENCH = 3, BENCH_FC = 1; // 3 bench players: 1 frontcourt + 2 backcourt
   const STAMINA = 5, FATIGUE = 0.9; // each stamina bar burned leaves 90% of every rating
-  const CROSS_COST = 2; // attacking a player from the other court group (backcourt vs frontcourt) burns 2 bars
-  // Stamina an attack costs: 1 bar against the same court group, 2 against the other one.
+  const CROSS_COST = 1; // stamina bars for attacking the other court group (backcourt vs frontcourt); same group is always 1
+  // Attacking out of position leaves the attacker's court group exposed: during the opponent's next turn
+  // every player in that group defends at 70% (inside and outside).
+  const EXPOSED = 0.7;
   const attackCost = (atkSlot, targetSlot) => (slotGroup(atkSlot) === slotGroup(targetSlot) ? 1 : CROSS_COST);
   const DEF_FLOOR = 20; // beaten or tired defenses never drop below this (0 brings back forced subs and wide-open hits)
   const DEF_REGEN = 0.2; // a benched defense that hit 0 recovers 20% of its base value per turn
@@ -102,7 +104,7 @@
     const hp = clampHp(opts.hp == null ? 100 : opts.hp);
     const names = opts.names || ['Player 1', 'Player 2'];
     return {
-      ver: 5, hpMax: hp,
+      ver: 6, hpMax: hp,
       // draft phase: `bench` collects the drafted players; it becomes the 8-card deck for the lineup
       players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: [], credits: CREDITS, pack: null, drafted: false, ready: false })),
       phase: 'draft', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
@@ -134,6 +136,9 @@
   const copy = c => (c ? JSON.parse(JSON.stringify(c)) : null);
   function log(s, p, kind, text) { s.log.unshift({ p, kind, text }); if (s.log.length > 80) s.log.length = 80; }
   const canAttack = pl => pl.field.some(c => c && c.sta > 0);
+  const isExposed = (s, q, grp) => !!(s.exposed && s.exposed[q] && s.exposed[q].grp === grp && s.exposed[q].turn === s.turnNo);
+  // what the view reports: the group exposed now, or the one that will be on the opponent's next turn
+  const exposure = (s, q) => { const x = s.exposed && s.exposed[q]; return x && x.turn >= s.turnNo ? { grp: x.grp, active: x.turn === s.turnNo } : null; };
   const broken = c => c.idef === 0 || c.odef === 0;
   // A starter with a 0 defense must come off when a healthy bench player of the same court group can replace them.
   const mustSub = pl => pl.field.map((c, i) => (c && broken(c) && pl.bench.some(b => b.grp === c.grp && !broken(b)) ? i : -1)).filter(i => i >= 0);
@@ -209,7 +214,7 @@
       ev.push({ e: 'ready', p });
       log(s, p, 'info', `${me.name} locked in a starting five and bench.`);
       if (op.ready) {
-        s.phase = 'play'; s.turnNo = 1; s.attacked = false; s.subOk = false; s.earnedSub = false;
+        s.phase = 'play'; s.turnNo = 1; s.attacked = false; s.subOk = false; s.earnedSub = false; s.exposed = [null, null];
         ev.push({ e: 'start', first: s.turn });
         log(s, s.turn, 'info', `Tip-off. ${s.players[s.turn].name} has the ball first.`);
       }
@@ -253,8 +258,10 @@
       if (atk.sta < cost) return { ok: false, error: `Attacking out of position costs ${cost} stamina bars. ${atk.name} has ${atk.sta}.` };
       atk.revealed = true; def.revealed = true;
       const sk = kind === 'inside' ? 'ins' : 'out', dk = kind === 'inside' ? 'idef' : 'odef';
-      const av = atk[sk], dv = def[dk];
-      const evA = { e: 'attack', p, slot, target, kind, atkVal: av, defVal: dv, atk: copy(atk), def: copy(def) };
+      // a defender in an exposed group defends at 70% this turn (never below the floor)
+      const exposedNow = isExposed(s, 1 - p, slotGroup(target));
+      const av = atk[sk], dv = exposedNow ? Math.max(Math.min(DEF_FLOOR, def[dk]), Math.round(def[dk] * EXPOSED)) : def[dk];
+      const evA = { e: 'attack', p, slot, target, kind, atkVal: av, defVal: dv, exposed: exposedNow, atk: copy(atk), def: copy(def) };
       s.attacked = true;
       const label = kind === 'inside' ? 'inside' : 'outside';
       if (av > dv) {
@@ -262,7 +269,7 @@
         // A defender already at 0 is wide open: the full attack goes to HP.
         const dmg = av - dv, open = dv === 0;
         op.hp = Math.max(0, op.hp - dmg);
-        def[dk] = Math.max(Math.min(DEF_FLOOR, dv), dv - dmg);
+        def[dk] = Math.max(Math.min(DEF_FLOOR, def[dk]), def[dk] - dmg);
         s.subOk = true; // successful attack opens subs for the rest of this turn
         Object.assign(evA, { result: 'score', dmg, open, hpAfter: op.hp, defAfter: def[dk] });
         log(s, p, 'score', open
@@ -282,6 +289,12 @@
       for (let i = 0; i < cost; i++) STATS.forEach(k => { atk[k] = Math.round(atk[k] * FATIGUE); });
       ['idef', 'odef'].forEach(k => { atk[k] = Math.max(atk[k], Math.min(DEF_FLOOR, evA.atk[k])); });
       Object.assign(evA, { sta: atk.sta, cost, statAfter: atk[sk] });
+      if (slotGroup(slot) !== slotGroup(target)) {
+        s.exposed[p] = { grp: slotGroup(slot), turn: s.turnNo + 1 };
+        evA.exposes = slotGroup(slot);
+        const whose = me.name === 'You' ? 'Your' : `${me.name}'s`;
+        log(s, p, 'info', `${whose} ${slotGroup(slot) === 'FC' ? 'frontcourt' : 'backcourt'} attacked out of position and is exposed next turn (defense −30%).`);
+      }
       ev.push(evA);
       if (op.hp <= 0) {
         s.phase = 'over'; s.winner = p;
@@ -319,6 +332,7 @@
     return {
       you: p, phase: s.phase, turn: s.turn, myTurn: s.turn === p, attacked: s.attacked,
       subOk: mine && !!s.subOk, mustSub: mine ? mustSub(me) : [],
+      exposed: { me: exposure(s, p), opp: exposure(s, 1 - p) },
       turnNo: s.turnNo, winner: s.winner, hpMax: s.hpMax,
       me: {
         name: me.name, hp: me.hp, ready: me.ready, field: me.field.map(copy), bench: me.bench.map(copy),
@@ -363,7 +377,8 @@
   // Bot's guess for a face-down defender: the court row gives away the position group.
   const GUESS = { FC: { inside: 80, outside: 61 }, BC: { inside: 62, outside: 74 } };
 
-  function botStep(s, p) {
+  // opts.crossPenalty: how much the bot dislikes attacking out of position (default 10)
+  function botStep(s, p, opts) {
     const me = s.players[p], op = s.players[1 - p];
     if (s.phase === 'draft') {
       return draftStep(Object.assign({}, me, { packs: [5, 4, 3, 2, 1].map(t => ({ tier: t, why: canOpen(s, p, t) })) }));
@@ -391,10 +406,12 @@
           if (!t || a.sta < cost) return;
           ['inside', 'outside'].forEach(k => {
             const av = k === 'inside' ? a.ins : a.out;
-            const dv = t.revealed ? (k === 'inside' ? t.idef : t.odef) : GUESS[slotGroup(j)][k];
+            const base = t.revealed ? (k === 'inside' ? t.idef : t.odef) : GUESS[slotGroup(j)][k];
+            const dv = isExposed(s, 1 - p, slotGroup(j)) ? Math.round(base * EXPOSED) : base;
             const d = av - dv;
             let sc = d > 0 ? d : d * 0.45;
-            if (cost > 1) sc -= 8; // the extra bar is worth something
+            if (cost > 1) sc -= 8; // an extra bar is worth something
+            if (slotGroup(i) !== slotGroup(j)) sc -= opts && opts.crossPenalty != null ? opts.crossPenalty : 10; // and so is not leaving a group exposed
             if (!t.revealed) sc -= 2;
             sc += (Math.random() - 0.5) * 6;
             if (!best || sc > best.sc) best = { sc, slot: i, target: j, kind: k };
@@ -406,5 +423,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, CROSS_COST, attackCost, DEF_FLOOR, CREDITS, PACK, TIER_NAME, TEAM, draftStep };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, CROSS_COST, EXPOSED, attackCost, DEF_FLOOR, CREDITS, PACK, TIER_NAME, TEAM, draftStep };
 });
