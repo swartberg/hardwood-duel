@@ -230,6 +230,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 .card.target{animation:targetpulse 1.1s ease-in-out infinite}
 .card.target .back,.card.target .front{box-shadow:0 0 0 1px var(--opp),0 0 24px 0 var(--opp)}
 .card.target:hover{transform:translateY(4px) scale(1.04)}
+.card.cost2::before{content:"2 STA";position:absolute;top:-9px;left:50%;translate:-50% 0;z-index:4;padding:1px 7px;border-radius:999px;background:var(--atk);color:#140a00;font-family:var(--f-display);font-weight:800;font-size:11px;letter-spacing:.08em;box-shadow:0 0 10px -2px var(--atk);white-space:nowrap}
 @keyframes targetpulse{50%{filter:brightness(1.35)}}
 .card.peek .front,.card.peek .back{box-shadow:0 0 0 1px #fff,0 0 18px -2px #fff}
 .card.dim{filter:saturate(.4) brightness(.6)}
@@ -342,7 +343,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
         <li><b>Set your lineup.</b> 5 starters (2 frontcourt, 3 backcourt) and a 3-player bench (1 frontcourt, 2 backcourt). Your opponent sees only card backs.</li>
         <li><b>Subs:</b> only after a successful attack (that turn) or a successful defense (your next turn), frontcourt for frontcourt and backcourt for backcourt. Resting players get 1 stamina bar back each turn.</li>
         <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip face up for the rest of that turn, then turn face down again.</li>
-        <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
+        <li><b>Stamina:</b> every starter has 5 bars. An attack on the same court group (backcourt on backcourt, frontcourt on frontcourt) burns 1 bar, an attack out of position burns 2. Every bar burned cuts all their ratings by 10%.</li>
         <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type. Defense never drops below 20.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
       </ol>
@@ -595,7 +596,10 @@ function render() {
   const flipBack = [];
   $('#oppField').innerHTML = formation(v.opp.field, 'opp', (c, i) => {
     if (c.hidden && lastOpp[i]) { flipBack.push(i); return cardHTML(lastOpp[i], 'opp'); }
-    const cls = [targeting ? 'target' : '', ui.peek === c.id ? 'peek' : '', c.sta <= 0 ? 'tired' : ''].join(' ');
+    // out-of-position targets cost 2 bars; ones the attacker can't afford are dimmed
+    const cost = targeting ? E.attackCost(ui.sel.slot, i) : 0, attacker = targeting ? v.me.field[ui.sel.slot] : null;
+    const reach = targeting && attacker.sta >= cost;
+    const cls = [reach ? 'target' : targeting ? 'dim' : '', reach && cost > 1 ? 'cost2' : '', ui.peek === c.id ? 'peek' : '', c.sta <= 0 ? 'tired' : ''].join(' ');
     return cardHTML(c, 'opp', cls);
   });
   lastOpp = {};
@@ -748,18 +752,18 @@ function renderMid() {
         const f = v.me.field[v.mustSub[0]];
         h = `<b>${esc(f.name)}</b> has 0 defense and must be subbed out. Tap a green ${f.grp === 'FC' ? 'frontcourt' : 'backcourt'} bench player.`;
       } else if (ui.kind && c) {
-        h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>).`;
+        h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>). Your ${c.grp === 'FC' ? 'frontcourt' : 'backcourt'} costs 1 stamina, the ${c.grp === 'FC' ? 'backcourt' : 'frontcourt'} costs 2${c.sta < E.CROSS_COST ? ' (not enough stamina)' : ''}.`;
         a = `<button class="btn ghost" data-act="cancel">Cancel</button>`;
       } else if (c && ui.sel.type === 'field') {
         const canAtk = !v.attacked && c.sta > 0;
-        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${v.attacked ? 'Attack used this turn.' : c.sta <= 0 ? 'Out of stamina.' : 'Attacking costs 1 stamina and 10% of all ratings.'}${subNote}`;
+        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${v.attacked ? 'Attack used this turn.' : c.sta <= 0 ? 'Out of stamina.' : 'Attacking costs 1 stamina bar (2 out of position), and each bar costs 10% of all ratings.'}${subNote}`;
         a = (canAtk ? `<button class="btn atk" data-act="inside">Inside<b>${c.ins}</b></button><button class="btn atk" data-act="outside">Outside<b>${c.out}</b></button>` : '') + endBtn;
       } else if (c) {
         h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${broken(c) ? 'Recovering a 0 defense, 20% per turn. Not ready to play.' : v.subOk ? 'Tap a green starter to sub them in.' : 'Subs open after a successful attack or a successful defense.'}`;
         a = `<button class="btn ghost" data-act="cancel">Cancel</button>` + endBtn;
       } else {
         const gassed = !v.me.field.some(f => f && f.sta > 0);
-        h = (v.attacked ? 'Attack used. End your turn.' : gassed ? 'Your starters are out of stamina.' : 'Select a starter to attack with. Each attack costs 1 stamina bar and 10% of all ratings.')
+        h = (v.attacked ? 'Attack used. End your turn.' : gassed ? 'Your starters are out of stamina.' : 'Select a starter to attack with. Attacks cost 1 stamina bar, or 2 against the other court group.')
           + (v.subOk ? '<br>Subs are open this turn.' : '');
         a = endBtn;
       }
@@ -957,8 +961,8 @@ async function animAttack(ev, nextView) {
       floater('Even', 'neutral', tEl);
       await wait(T(700));
     }
-    // fatigue: one stamina bar and 10% of every rating
-    floater(`−1 STA · ${ev.sta}/${E.STAMINA}`, 'neutral', aEl);
+    // fatigue: the stamina bars spent, 10% of every rating each
+    floater(`−${ev.cost || 1} STA · ${ev.sta}/${E.STAMINA}`, 'neutral', aEl);
     const pips = aEl.querySelector('.front .sta');
     if (pips) pips.outerHTML = staHTML(ev.sta);
     await wait(T(500));
