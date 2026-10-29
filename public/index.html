@@ -107,6 +107,10 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 .field{display:grid;gap:6px;padding:8px 4px;position:relative}
 .zone{position:relative;display:flex;justify-content:center}
 .zone + .zone{border-top:1px dashed var(--line);padding-top:6px}
+.zone.exposed{background:rgba(255,74,95,.07);border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,74,95,.35)}
+.zone.exposed::after,.zone.pending::after{content:attr(data-x);position:absolute;right:6px;top:6px;z-index:5;padding:2px 8px;border-radius:999px;font-family:var(--f-display);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+.zone.exposed::after{background:var(--bad);color:#fff;box-shadow:0 0 12px -2px var(--bad)}
+.zone.pending::after{border:1px dashed var(--bad);color:var(--bad);background:var(--bg)}
 .zrow{display:flex;justify-content:center;gap:var(--gap)}
 .zl{position:absolute;left:2px;top:50%;translate:0 -50%;writing-mode:vertical-rl;rotate:180deg;font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);pointer-events:none}
 .field.me .zl{color:color-mix(in srgb, var(--me) 55%, var(--dim))}
@@ -343,7 +347,8 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
         <li><b>Set your lineup.</b> 5 starters (2 frontcourt, 3 backcourt) and a 3-player bench (1 frontcourt, 2 backcourt). Your opponent sees only card backs.</li>
         <li><b>Subs:</b> only after a successful attack (that turn) or a successful defense (your next turn), frontcourt for frontcourt and backcourt for backcourt. Resting players get 1 stamina bar back each turn.</li>
         <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip face up for the rest of that turn, then turn face down again.</li>
-        <li><b>Stamina:</b> every starter has 5 bars. An attack on the same court group (backcourt on backcourt, frontcourt on frontcourt) burns 1 bar, an attack out of position burns 2. Every bar burned cuts all their ratings by 10%.</li>
+        <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
+        <li><b>Out of position:</b> a backcourt player attacking the frontcourt (or the reverse) leaves their own group exposed. During the opponent's next turn, everyone in that group defends at −30%.</li>
         <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type. Defense never drops below 20.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
       </ol>
@@ -704,7 +709,10 @@ function formation(cards, side, cell) {
     if (!c) return `<div class="slot empty" data-n="${g}"></div>`;
     return `<div class="slot" data-side="${side}" data-slot="${i}">${cell(c, i)}</div>`;
   };
-  const row = (idx, g) => `<div class="zone ${g.toLowerCase()}"><span class="zl">${g === 'FC' ? 'Front' : 'Back'}</span><div class="zrow">${idx.map(slot).join('')}</div></div>`;
+  // exposure tag: "Exposed" while it applies, "Exposed next turn" right after the out-of-position attack
+  const x = view && view.exposed && view.exposed[side === 'opp' ? 'opp' : 'me'];
+  const tag = g => (x && x.grp === g ? (x.active ? ' exposed" data-x="Exposed · DEF −30%' : ' pending" data-x="Exposed next turn') : '');
+  const row = (idx, g) => `<div class="zone ${g.toLowerCase()}${tag(g)}"><span class="zl">${g === 'FC' ? 'Front' : 'Back'}</span><div class="zrow">${idx.map(slot).join('')}</div></div>`;
   return row([2, 3, 4], 'BC') + row([0, 1], 'FC');
 }
 function previewField(v) {
@@ -752,18 +760,18 @@ function renderMid() {
         const f = v.me.field[v.mustSub[0]];
         h = `<b>${esc(f.name)}</b> has 0 defense and must be subbed out. Tap a green ${f.grp === 'FC' ? 'frontcourt' : 'backcourt'} bench player.`;
       } else if (ui.kind && c) {
-        h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>). Your ${c.grp === 'FC' ? 'frontcourt' : 'backcourt'} costs 1 stamina, the ${c.grp === 'FC' ? 'backcourt' : 'frontcourt'} costs 2${c.sta < E.CROSS_COST ? ' (not enough stamina)' : ''}.`;
+        h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>). Hitting the ${c.grp === 'FC' ? 'backcourt' : 'frontcourt'} is out of position: your ${c.grp === 'FC' ? 'frontcourt' : 'backcourt'} defends at −30% on their next turn.`;
         a = `<button class="btn ghost" data-act="cancel">Cancel</button>`;
       } else if (c && ui.sel.type === 'field') {
         const canAtk = !v.attacked && c.sta > 0;
-        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${v.attacked ? 'Attack used this turn.' : c.sta <= 0 ? 'Out of stamina.' : 'Attacking costs 1 stamina bar (2 out of position), and each bar costs 10% of all ratings.'}${subNote}`;
+        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${v.attacked ? 'Attack used this turn.' : c.sta <= 0 ? 'Out of stamina.' : 'Attacking costs 1 stamina bar and 10% of all ratings.'}${subNote}`;
         a = (canAtk ? `<button class="btn atk" data-act="inside">Inside<b>${c.ins}</b></button><button class="btn atk" data-act="outside">Outside<b>${c.out}</b></button>` : '') + endBtn;
       } else if (c) {
         h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${broken(c) ? 'Recovering a 0 defense, 20% per turn. Not ready to play.' : v.subOk ? 'Tap a green starter to sub them in.' : 'Subs open after a successful attack or a successful defense.'}`;
         a = `<button class="btn ghost" data-act="cancel">Cancel</button>` + endBtn;
       } else {
         const gassed = !v.me.field.some(f => f && f.sta > 0);
-        h = (v.attacked ? 'Attack used. End your turn.' : gassed ? 'Your starters are out of stamina.' : 'Select a starter to attack with. Attacks cost 1 stamina bar, or 2 against the other court group.')
+        h = (v.attacked ? 'Attack used. End your turn.' : gassed ? 'Your starters are out of stamina.' : 'Select a starter to attack with. Attacking out of position exposes your group (−30% defense) on their next turn.')
           + (v.subOk ? '<br>Subs are open this turn.' : '');
         a = endBtn;
       }
@@ -912,7 +920,7 @@ async function animAttack(ev, nextView) {
 
     const co = document.createElement('div');
     co.className = 'callout';
-    co.innerHTML = `<span class="k">${ev.kind} attack</span><div class="nums"><span class="na">${ev.atkVal}</span><i>VS</i><span class="nd">${ev.defVal}</span></div><span class="res"></span>`;
+    co.innerHTML = `<span class="k">${ev.kind} attack${ev.exposed ? ' · exposed defense' : ''}</span><div class="nums"><span class="na">${ev.atkVal}</span><i>VS</i><span class="nd">${ev.defVal}</span></div><span class="res"></span>`;
     $('#arena').appendChild(co);
     await wait(T(650));
 
@@ -1132,7 +1140,7 @@ $('#credits').addEventListener('click', () => {
 const hot = window.claude && window.claude.hot;
 if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (ctl && !ctl.online && ctl.s ? { s: ctl.s, hp: ctl.hp } : {}));
 const boot = d => {
-  if (d && d.s && d.s.ver === 5 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
+  if (d && d.s && d.s.ver === 6 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
 };
 if (hot && typeof hot.ready === 'function') hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
 })();
