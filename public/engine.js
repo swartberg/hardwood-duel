@@ -53,7 +53,7 @@
   const TIER_BONUS = { 1: -12, 2: -6, 3: 0, 4: 4, 5: 8 };
 
   const FIELD = 5, DECK = 12;
-  const CREDITS = 15, PACK = 5; // pack draft: 15 credits, each pack shows 5 players of one tier and costs its tier
+  const CREDITS = 20, PACK = 5; // pack draft: 20 credits, each pack shows 5 players of one tier and costs its tier
   // Court formation: slots 0-1 are frontcourt (PF, C), slots 2-4 are backcourt (PG, SG, SF).
   const FRONT = 2;
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from

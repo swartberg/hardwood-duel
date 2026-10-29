@@ -27,7 +27,7 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 
 - Starting HP: chosen on the menu (100 / 150 / 200 / custom).
 - `ARCH` — stat ranges per position (PG, SG, SF, PF, C).
-- `CREDITS`, `PACK` — 15 draft credits; each pack shows 5 players of one tier and costs its tier (5 Superstar … 1 Bench Warmer).
+- `CREDITS`, `PACK` — 20 draft credits; each pack shows 5 players of one tier and costs its tier (5 Superstar … 1 Bench Warmer).
 - `TIER_BONUS` — stat bonus or penalty per tier (Superstar +8 … Bench Warmer −12).
 - `FIELD`, `BENCH` — 5 starters (2 FC + 3 BC) and a 3-player bench (1 FC + 2 BC), set from the 8 drafted players.
 - `STAMINA`, `FATIGUE` — 5 stamina bars per card; each attack uses one and multiplies all four ratings by 0.9.
@@ -37,7 +37,7 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 
 ## Rules in short
 
-- Draft: open packs with 15 credits (5 Superstars, 4 All-Stars, 3 Starters, 2 Role Players, 1 Bench Warmers), keep 1 of the 5 players in each, until you have 8 (3 frontcourt, 5 backcourt). You must keep 1 credit per open spot, so you can always finish. Both players draft from one pool, so no player appears on both teams.
+- Draft: open packs with 20 credits (5 Superstars, 4 All-Stars, 3 Starters, 2 Role Players, 1 Bench Warmers), keep 1 of the 5 players in each, until you have 8 (3 frontcourt, 5 backcourt). You must keep 1 credit per open spot, so you can always finish. Both players draft from one pool, so no player appears on both teams.
 - Cards that attack or defend are face up only until the end of that turn, then flip back over. Subbed players also go face down, so the opponent can't follow who moved where.
 
 - Beat a defender: the difference comes off their HP and off the defender's rating for that shot type.
