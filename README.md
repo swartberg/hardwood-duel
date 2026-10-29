@@ -28,16 +28,20 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 - Starting HP: chosen on the menu (100 / 150 / 200 / custom).
 - `ARCH` — stat ranges per position (PG, SG, SF, PF, C).
 - `TIER_BONUS` — boost for All-Star (2) and MVP (3) cards.
-- `FIELD`, `DECK` — 5 starters picked from a 12-card deck. The starting five is locked for the whole game.
+- `FIELD`, `BENCH`, `DECK` — 5 starters (2 FC + 3 BC) and a 3-player bench (1 FC + 2 BC) picked from a 12-card deck.
 - `STAMINA`, `FATIGUE` — 5 stamina bars per card; each attack uses one and multiplies all four ratings by 0.9.
-- `botStep` — bot lineup and attack choices.
+- `DEF_REGEN` — share of base value a benched 0-defense recovers per turn (0.2).
+- `botStep` — bot lineup, sub and attack choices.
 
 ## Rules in short
 
 - Beat a defender: the difference comes off their HP and off the defender's rating for that shot type.
-- A defender at 0 on that defense is wide open, so the full attack value hits HP.
+- Subs (frontcourt for frontcourt, backcourt for backcourt) are allowed only after a successful attack (rest of that turn) or a successful defense (your next turn).
+- A starter whose inside or outside defense reaches 0 must be subbed out before you can attack or end your turn. On the bench that defense recovers 20% of its base per turn, and the player can't come back in while it is 0.
+- Bench players recover 1 stamina bar per turn (at the end of their owner's turn), which also undoes one 10% fatigue step.
+- If no healthy bench player can replace a 0-defense starter, they stay on and are wide open: the full attack value hits HP.
 - Get stopped: the difference comes off your attacker's rating for that shot type.
-- If no starter on either side has stamina left, the higher HP wins (equal HP is a draw).
+- If no starter on court on either side has stamina left, the higher HP wins (equal HP is a draw).
 - Both decks come from one shared pool, so the two players never hold the same name.
 
-At 100 HP a bot-vs-bot game lasts about 4 turns (150 HP: about 6, 200 HP: about 7).
+At 100 HP a bot-vs-bot game lasts about 4 turns (150 HP: about 7, 200 HP: about 8–9).

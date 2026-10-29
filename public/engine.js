@@ -41,7 +41,9 @@
   // Court formation: slots 0-1 are frontcourt (PF, C), slots 2-4 are backcourt (PG, SG, SF).
   const FRONT = 2;
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
+  const BENCH = 3, BENCH_FC = 1; // 3 bench players: 1 frontcourt + 2 backcourt
   const STAMINA = 5, FATIGUE = 0.9; // each attack burns a bar and leaves 90% of every rating
+  const DEF_REGEN = 0.2; // a benched defense that hit 0 recovers 20% of its base value per turn
   const STATS = ['ins', 'out', 'idef', 'odef'];
   const GROUP = { PF: 'FC', C: 'FC', PG: 'BC', SG: 'BC', SF: 'BC' };
   const slotGroup = i => (i < FRONT ? 'FC' : 'BC');
@@ -77,7 +79,7 @@
     const names = opts.names || ['Player 1', 'Player 2'];
     const used = new Set(); // one player pool: no name appears in both decks
     return {
-      ver: 2, hpMax: hp,
+      ver: 3, hpMax: hp,
       players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: makeDeck(DECK, used), ready: false })),
       phase: 'setup', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
     };
@@ -86,6 +88,26 @@
   const copy = c => (c ? JSON.parse(JSON.stringify(c)) : null);
   function log(s, p, kind, text) { s.log.unshift({ p, kind, text }); if (s.log.length > 80) s.log.length = 80; }
   const canAttack = pl => pl.field.some(c => c && c.sta > 0);
+  const broken = c => c.idef === 0 || c.odef === 0;
+  // A starter with a 0 defense must come off when a healthy bench player of the same court group can replace them.
+  const mustSub = pl => pl.field.map((c, i) => (c && broken(c) && pl.bench.some(b => b.grp === c.grp && !broken(b)) ? i : -1)).filter(i => i >= 0);
+
+  // Bench recovery, run when the owner ends a turn: one stamina bar back (undoing one step of fatigue),
+  // and a defense that hit 0 climbs back 20% of its base value.
+  function rest(pl) {
+    pl.bench.forEach(c => {
+      c.rec = c.rec || {};
+      ['idef', 'odef'].forEach(k => { if (c[k] === 0) c.rec[k] = true; });
+      if (c.sta < STAMINA) {
+        c.sta += 1;
+        STATS.forEach(k => { if (!c.rec[k]) c[k] = Math.min(c[k + '0'], Math.round(c[k] / FATIGUE)); });
+      }
+      Object.keys(c.rec).forEach(k => {
+        c[k] = Math.min(c[k + '0'], c[k] + Math.round(c[k + '0'] * DEF_REGEN));
+        if (c[k] >= c[k + '0']) delete c.rec[k];
+      });
+    });
+  }
 
   function apply(s, p, a) {
     if (p !== 0 && p !== 1) return { ok: false, error: 'Unknown player.' };
@@ -98,20 +120,21 @@
     if (a.t === 'lineup') {
       if (s.phase !== 'setup') return { ok: false, error: 'Lineups are already set.' };
       if (me.ready) return { ok: false, error: 'Your lineup is already locked.' };
-      const ids = Array.isArray(a.ids) ? a.ids : [];
-      if (ids.length !== FIELD || new Set(ids).size !== FIELD) return { ok: false, error: 'Pick exactly 5 different players.' };
-      const picked = ids.map(id => me.bench.find(c => c.id === id));
-      if (picked.some(c => !c)) return { ok: false, error: 'Those cards are not in your deck.' };
+      const ids = Array.isArray(a.ids) ? a.ids : [], bids = Array.isArray(a.bench) ? a.bench : [];
+      if (ids.length !== FIELD || bids.length !== BENCH || new Set([...ids, ...bids]).size !== FIELD + BENCH) return { ok: false, error: 'Pick 5 different starters and 3 bench players.' };
+      const picked = ids.map(id => me.bench.find(c => c.id === id)), bpicked = bids.map(id => me.bench.find(c => c.id === id));
+      if (picked.some(c => !c) || bpicked.some(c => !c)) return { ok: false, error: 'Those cards are not in your deck.' };
       const fc = picked.filter(c => c.grp === 'FC'), bc = picked.filter(c => c.grp === 'BC');
       if (fc.length !== FRONT || bc.length !== FIELD - FRONT) return { ok: false, error: 'Start 2 frontcourt and 3 backcourt players.' };
-      // The starting five plays the whole game; the rest of the deck sits out.
+      if (bpicked.filter(c => c.grp === 'FC').length !== BENCH_FC) return { ok: false, error: 'Put 1 frontcourt and 2 backcourt players on the bench.' };
+      // These 8 play the whole game; the rest of the deck sits out.
       me.field = [...fc, ...bc];
-      me.bench = [];
+      me.bench = bpicked;
       me.ready = true;
       ev.push({ e: 'ready', p });
-      log(s, p, 'info', `${me.name} locked in a starting five.`);
+      log(s, p, 'info', `${me.name} locked in a starting five and bench.`);
       if (op.ready) {
-        s.phase = 'play'; s.turnNo = 1; s.attacked = false;
+        s.phase = 'play'; s.turnNo = 1; s.attacked = false; s.subOk = false; s.earnedSub = false;
         ev.push({ e: 'start', first: s.turn });
         log(s, s.turn, 'info', `Tip-off. ${s.players[s.turn].name} has the ball first.`);
       }
@@ -121,7 +144,27 @@
     if (s.phase !== 'play') return { ok: false, error: 'Wait for both lineups.' };
     if (s.turn !== p) return { ok: false, error: "It's not your turn." };
 
-    if (a.t === 'swap') return { ok: false, error: 'Lineups are locked for the whole game.' };
+    const forced = mustSub(me);
+
+    if (a.t === 'swap') {
+      const slot = a.slot | 0;
+      if (slot < 0 || slot >= FIELD || !me.field[slot]) return { ok: false, error: 'Pick a starter to sub out.' };
+      const isForced = forced.includes(slot);
+      if (!isForced && !s.subOk) return { ok: false, error: forced.length ? 'Sub out the player with 0 defense first.' : 'Subs open only after a successful attack or a successful defense.' };
+      const bi = me.bench.findIndex(c => c.id === a.benchId);
+      if (bi < 0) return { ok: false, error: 'That card is not on your bench.' };
+      const inc = me.bench[bi];
+      if (inc.grp !== slotGroup(slot)) return { ok: false, error: slotGroup(slot) === 'FC' ? 'Frontcourt players can only be swapped with frontcourt players.' : 'Backcourt players can only be swapped with backcourt players.' };
+      if (broken(inc)) return { ok: false, error: `${inc.name} is still recovering a 0 defense.` };
+      const out = me.field[slot];
+      me.field[slot] = inc;
+      me.bench[bi] = out;
+      ev.push({ e: 'swap', p, slot, forced: isForced });
+      log(s, p, 'sub', isForced ? `${out.name} has nothing left on defense and goes to the bench.` : `${me.name} made a substitution.`);
+      return { ok: true, events: ev };
+    }
+
+    if (forced.length && (a.t === 'attack' || a.t === 'end')) return { ok: false, error: `${me.field[forced[0]].name} has 0 defense and must be subbed out first.` };
 
     if (a.t === 'attack') {
       if (s.attacked) return { ok: false, error: 'You already attacked this turn.' };
@@ -142,6 +185,7 @@
         const dmg = av - dv, open = dv === 0;
         op.hp = Math.max(0, op.hp - dmg);
         def[dk] = Math.max(0, dv - dmg);
+        s.subOk = true; // successful attack opens subs for the rest of this turn
         Object.assign(evA, { result: 'score', dmg, open, hpAfter: op.hp, defAfter: def[dk] });
         log(s, p, 'score', open
           ? `${atk.name} found ${def.name} wide open ${label}. ${dmg} straight to ${op.name}'s HP.`
@@ -149,6 +193,7 @@
       } else if (av < dv) {
         const diff = dv - av;
         atk[sk] = Math.max(0, atk[sk] - diff);
+        s.earnedSub = true; // successful defense opens subs on the defender's next turn
         Object.assign(evA, { result: 'blocked', diff });
         log(s, p, 'block', `${def.name} shut down ${atk.name}'s ${label} attack (${av} vs ${dv}). ${atk.name} loses ${diff} ${label} scoring.`);
       } else {
@@ -163,17 +208,21 @@
         s.phase = 'over'; s.winner = p;
         ev.push({ e: 'over', winner: p });
         log(s, p, 'info', `${me.name} wins.`);
-      } else if (!canAttack(me) && !canAttack(op)) {
-        // Both benches are gassed: higher HP takes it, equal HP is a draw (winner -1).
-        s.phase = 'over'; s.winner = me.hp > op.hp ? p : op.hp > me.hp ? 1 - p : -1;
-        ev.push({ e: 'over', winner: s.winner });
-        log(s, p, 'info', s.winner < 0 ? 'Both teams are out of stamina. It ends in a draw.' : `Both teams are out of stamina. ${s.players[s.winner].name} wins on HP.`);
       }
       return { ok: true, events: ev };
     }
 
     if (a.t === 'end') {
+      rest(me);
+      if (!canAttack(me) && !canAttack(op)) {
+        // Nobody on court can attack, so nobody can earn a sub: higher HP takes it, equal HP is a draw (winner -1).
+        s.phase = 'over'; s.winner = me.hp > op.hp ? p : op.hp > me.hp ? 1 - p : -1;
+        ev.push({ e: 'over', winner: s.winner });
+        log(s, p, 'info', s.winner < 0 ? 'Both teams are out of stamina. It ends in a draw.' : `Both teams are out of stamina. ${s.players[s.winner].name} wins on HP.`);
+        return { ok: true, events: ev };
+      }
       s.turn = 1 - p; s.attacked = false; s.turnNo++;
+      s.subOk = !!s.earnedSub; s.earnedSub = false;
       ev.push({ e: 'turn', p: s.turn });
       return { ok: true, events: ev };
     }
@@ -183,13 +232,17 @@
 
   function viewFor(s, p) {
     const me = s.players[p], op = s.players[1 - p];
+    const masked = c => (c.revealed ? copy(c) : { id: c.id, hidden: true, sta: c.sta });
+    const mine = s.phase === 'play' && s.turn === p;
     return {
       you: p, phase: s.phase, turn: s.turn, myTurn: s.turn === p, attacked: s.attacked,
+      subOk: mine && !!s.subOk, mustSub: mine ? mustSub(me) : [],
       turnNo: s.turnNo, winner: s.winner, hpMax: s.hpMax,
       me: { name: me.name, hp: me.hp, ready: me.ready, field: me.field.map(copy), bench: me.bench.map(copy) },
       opp: {
         name: op.name, hp: op.hp, ready: op.ready,
-        field: op.field.map(c => (c ? (c.revealed ? copy(c) : { id: c.id, hidden: true, sta: c.sta }) : null))
+        field: op.field.map(c => (c ? masked(c) : null)),
+        bench: s.phase === 'setup' ? [] : op.bench.map(masked)
       },
       log: s.log.slice(0, 50).map(l => ({ mine: l.p === p, kind: l.kind, text: l.text }))
     };
@@ -202,14 +255,30 @@
     ...cards.filter(c => c.grp === 'FC').sort(byValue).slice(0, FRONT),
     ...cards.filter(c => c.grp === 'BC').sort(byValue).slice(0, FIELD - FRONT)
   ];
+  function autoLineup(deck) {
+    const five = bestFive(deck), rest = deck.filter(c => !five.includes(c)).sort(byValue);
+    const bench = [...rest.filter(c => c.grp === 'FC').slice(0, BENCH_FC), ...rest.filter(c => c.grp === 'BC').slice(0, BENCH - BENCH_FC)];
+    return { ids: five.map(c => c.id), bench: bench.map(c => c.id) };
+  }
+  // Best healthy bench replacement for a slot.
+  const benchFor = (pl, slot) => pl.bench.filter(b => b.grp === slotGroup(slot) && !broken(b)).sort((a, b) => b.sta - a.sta || byValue(a, b))[0];
 
   function botStep(s, p) {
     const me = s.players[p], op = s.players[1 - p];
     if (s.phase === 'setup') {
       if (me.ready) return null;
-      return { t: 'lineup', ids: bestFive([...me.bench]).map(c => c.id) };
+      return Object.assign({ t: 'lineup' }, autoLineup(me.bench));
     }
     if (s.phase !== 'play' || s.turn !== p) return null;
+    const forced = mustSub(me);
+    if (forced.length) return { t: 'swap', slot: forced[0], benchId: benchFor(me, forced[0]).id };
+    if (s.subOk) {
+      // Rest tired starters when a fresher bench player is available.
+      for (let i = 0; i < FIELD; i++) {
+        const c = me.field[i], b = benchFor(me, i);
+        if (c && b && c.sta <= 2 && b.sta >= c.sta + 2) return { t: 'swap', slot: i, benchId: b.id };
+      }
+    }
     if (!s.attacked) {
       let best = null;
       me.field.forEach((a, i) => {
@@ -232,5 +301,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, STAMINA };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA };
 });
