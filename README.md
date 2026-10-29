@@ -37,7 +37,7 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 
 ## Rules in short
 
-- Draft: open packs with 20 credits (5 Superstars, 4 All-Stars, 3 Starters, 2 Role Players, 1 Bench Warmers), keep 1 of the 5 players in each, until you have 8 (3 frontcourt, 5 backcourt). You must keep 1 credit per open spot, so you can always finish. Both players draft from one pool, so no player appears on both teams.
+- Draft: open packs with 20 credits (5 Superstars, 4 All-Stars, 3 Starters, 2 Role Players, 1 Bench Warmers), keep 1 of the 5 players in each, until you have 8 (3 frontcourt, 5 backcourt). You must keep 1 credit per open spot, so you can always finish. Each player drafts independently, so the same player can be on both teams (never twice on one team).
 - Cards that attack or defend are face up only until the end of that turn, then flip back over. Subbed players also go face down, so the opponent can't follow who moved where.
 
 - Beat a defender: the difference comes off their HP and off the defender's rating for that shot type.

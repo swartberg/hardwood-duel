@@ -345,7 +345,6 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
         <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
         <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type. Defense never drops below 20.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
-        <li>Every name is unique: you and your opponent never share a player.</li>
       </ol>
       <button class="btn ghost" id="credits" style="margin-top:12px;padding:5px 10px;font-size:12px">Photo credits</button>
     </div>
@@ -541,7 +540,7 @@ function cardHTML(c, side, cls = '', attrs = '') {
 /* ---------- state ---------- */
 let ctl = null, view = null, busy = Promise.resolve();
 let hpSel = Number(store.get('hd.hp')) || 100;
-const ui = { sel: null, kind: null, pick: [], bpick: [], peek: null, autoDraft: false, autoTimer: null, packKey: null };
+const ui = { sel: null, kind: null, pick: [], bpick: [], peek: null, autoDraft: false, autoTimer: null };
 let lastOpp = {}; // face-up opponent cards from the previous render, to animate them turning back over
 const seenIds = { me: new Set(), opp: new Set(), bench: new Set() };
 
@@ -680,18 +679,20 @@ function renderDraft(v) {
       <span class="pk-stars">${'★'.repeat(pk.tier)}</span><span class="pk-sub">${E.PACK} players · keep 1</span></button>`).join('');
   let opened = '';
   if (me.pack) {
-    const key = me.pack.cards.map(c => c.id).join();
-    const fresh = key !== ui.packKey; ui.packKey = key;
     opened = `<div class="opened"><span class="eyebrow">${E.TIER_NAME[me.pack.tier]} pack · tap one player to keep</span><div class="pcards">${
-      me.pack.cards.map((c, i) => cardHTML(c, 'menu', fresh ? 'flipin' : '', `data-pick="${c.id}" style="--d:${i * 130}ms"`)).join('')}</div></div>`;
+      me.pack.cards.map((c, i) => cardHTML(c, 'menu', 'flipin', `data-pick="${c.id}" style="--d:${i * 130}ms"`)).join('')}</div></div>`;
   }
   const empties = ['FC', 'BC'].flatMap(g => Array(Math.max(0, me.needs[g])).fill(g));
   const team = me.bench.map(c => `<div class="slot">${cardHTML(c, 'me', '', 'tabindex="-1"')}</div>`).join('')
     + empties.map(g => `<div class="slot empty" data-n="${g}"></div>`).join('');
-  $('#draft').innerHTML = `<div class="dhead"><div class="coins">${me.credits}<small>credits left</small></div>
-      <div class="dneed">Team <b>${n}/${E.TEAM}</b> · Frontcourt <b>${have('FC')}/3</b> · Backcourt <b>${have('BC')}/5</b> · ${esc(v.opp.name)} <b>${v.opp.count}/${E.TEAM}</b></div></div>
+  // Only rebuild when your own draft changed: the opponent drafts at the same time, and redrawing on
+  // their moves would swallow clicks that land mid-redraw. Their progress is patched in as text.
+  const html = `<div class="dhead"><div class="coins">${me.credits}<small>credits left</small></div>
+      <div class="dneed">Team <b>${n}/${E.TEAM}</b> · Frontcourt <b>${have('FC')}/3</b> · Backcourt <b>${have('BC')}/5</b> · ${esc(v.opp.name)} <b id="oppDraft"></b></div></div>
     ${me.drafted ? '' : `<div class="packs">${packs}</div>`}${opened}
     <div class="team"><span class="eyebrow">Your team</span><div class="tcards">${team}</div></div>`;
+  if (html !== ui.draftHtml) { $('#draft').innerHTML = html; ui.draftHtml = html; }
+  $('#oppDraft').textContent = `${v.opp.count}/${E.TEAM}`;
 }
 function formation(cards, side, cell) {
   const slot = i => {
@@ -769,7 +770,9 @@ function renderMid() {
     h = v.winner === -1 ? 'Draw.' : v.winner === v.you ? 'You won.' : `${esc(v.opp.name)} won.`;
     a = `<button class="btn primary" data-act="again">Play again</button>`;
   }
-  hint.innerHTML = h; act.innerHTML = a;
+  // same idea: leave the buttons alone unless they changed, so a click is never lost to a redraw
+  if (h !== ui.midH) { hint.innerHTML = h; ui.midH = h; }
+  if (a !== ui.midA) { act.innerHTML = a; ui.midA = a; }
 }
 
 /* ---------- interaction ---------- */
@@ -995,7 +998,7 @@ function showOver() {
 function closeModal() { const m = $('#overModal'); if (m) m.remove(); }
 
 /* ---------- controllers ---------- */
-function resetUi() { clearTimeout(ui.autoTimer); ui.autoTimer = null; ui.autoDraft = false; ui.packKey = null; lastOpp = {}; ui.sel = null; ui.kind = null; ui.pick = []; ui.bpick = []; ui.peek = null; seenIds.me = new Set(); seenIds.opp = new Set(); seenIds.bench = new Set(); view = null; busy = Promise.resolve(); }
+function resetUi() { ui.draftHtml = ui.midH = ui.midA = null; clearTimeout(ui.autoTimer); ui.autoTimer = null; ui.autoDraft = false; lastOpp = {}; ui.sel = null; ui.kind = null; ui.pick = []; ui.bpick = []; ui.peek = null; seenIds.me = new Set(); seenIds.opp = new Set(); seenIds.bench = new Set(); view = null; busy = Promise.resolve(); }
 function showGame() { $('#menu').hidden = true; $('#game').hidden = false; scrollTo(0, 0); }
 function leaveGame() { if (ctl) ctl.close(); ctl = null; closeModal(); $('#game').hidden = true; $('#menu').hidden = false; resetUi(); }
 $('#quit').addEventListener('click', leaveGame);

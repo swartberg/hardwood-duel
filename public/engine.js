@@ -109,11 +109,11 @@
   // ---------- Pack draft ----------
   const TEAM = FIELD + BENCH; // 8 players: 3 frontcourt, 5 backcourt
   const needs = pl => ({ FC: FRONT + BENCH_FC - pl.bench.filter(c => c.grp === 'FC').length, BC: TEAM - FRONT - BENCH_FC - pl.bench.filter(c => c.grp === 'BC').length });
-  const takenNames = s => new Set(s.players.flatMap(pl => [...pl.field, ...pl.bench]).filter(Boolean).map(c => c.name));
-  // Rows a player could pull from a tier: right court group, not owned by anyone.
-  function packPool(s, p, tier, skip) {
-    const need = needs(s.players[p]), taken = takenNames(s);
-    return ROSTER.filter(r => r[2] === tier && need[GROUP[r[1]]] > 0 && !taken.has(r[0]) && !(skip && skip.has(r[0])));
+  // Rows a player could pull from a tier: right court group, not already on their own team.
+  // Each player drafts on their own; the same player can end up on both teams.
+  function packPool(s, p, tier) {
+    const pl = s.players[p], need = needs(pl), mine = new Set(pl.bench.map(c => c.name));
+    return ROSTER.filter(r => r[2] === tier && need[GROUP[r[1]]] > 0 && !mine.has(r[0]));
   }
   // Highest price a player can pay and still fill every remaining spot with 1-credit packs.
   const maxPrice = pl => pl.credits - (TEAM - pl.bench.length - 1);
@@ -126,22 +126,7 @@
     if (!packPool(s, p, tier).length) return 'No players left in that pack for the spots you need.';
     return '';
   }
-  // Prefer names not showing in the opponent's open pack; fall back to them if the tier runs thin.
-  function makePack(s, p, tier) {
-    const op = s.players[1 - p], theirs = new Set(op.pack ? op.pack.cards.map(c => c.name) : []);
-    const rows = shuffle(packPool(s, p, tier, theirs)).concat(shuffle(packPool(s, p, tier).filter(r => theirs.has(r[0]))));
-    return rows.slice(0, PACK).map(cardFrom);
-  }
-  // After a pick, drop that name from the other player's open pack and top it back up if possible.
-  function fixPack(s, q, name) {
-    const pl = s.players[q];
-    if (!pl.pack || !pl.pack.cards.some(c => c.name === name)) return;
-    pl.pack.cards = pl.pack.cards.filter(c => c.name !== name);
-    const shown = new Set(pl.pack.cards.map(c => c.name));
-    const extra = shuffle(packPool(s, q, pl.pack.tier, shown))[0];
-    if (extra) pl.pack.cards.push(cardFrom(extra));
-    if (!pl.pack.cards.length) { pl.credits += pl.pack.tier; pl.pack = null; }
-  }
+  const makePack = (s, p, tier) => shuffle(packPool(s, p, tier)).slice(0, PACK).map(cardFrom);
 
   const copy = c => (c ? JSON.parse(JSON.stringify(c)) : null);
   function log(s, p, kind, text) { s.log.unshift({ p, kind, text }); if (s.log.length > 80) s.log.length = 80; }
@@ -193,7 +178,6 @@
       if (!c) return { ok: false, error: 'That player is not in your pack.' };
       me.bench.push(c);
       me.pack = null;
-      fixPack(s, 1 - p, c.name);
       ev.push({ e: 'picked', p });
       if (me.bench.length >= TEAM) { me.drafted = true; log(s, p, 'info', `${me.name} finished drafting.`); }
       if (me.drafted && op.drafted) {
