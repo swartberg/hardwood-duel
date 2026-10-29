@@ -5,26 +5,27 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // [name, position, tier]  tier 3 = MVP, 2 = All-Star, 1 = Starter
+  // [name, position, tier, wikipediaTitle?]  tier 3 = MVP, 2 = All-Star, 1 = Starter.
+  // The Wikipedia title (defaults to the name) is used to look up a freely licensed photo.
   const ROSTER = [
-    ['LeBrandon Jones', 'SF', 3], ['Stephan Curran', 'PG', 3], ['Kevon Durrant', 'SF', 3], ['Yiannis Antetokoumbo', 'PF', 3],
-    ['Nikola Jokovic', 'C', 3], ['Luka Donchich', 'PG', 3], ['Joel Embeed', 'C', 3], ['Shay Gilbert-Alexandros', 'PG', 3],
-    ['Viktor Wembanyaga', 'C', 3], ['Michael Jordson', 'SG', 3], ['Koby Bryson', 'SG', 3], ["Shaquan O'Neil", 'C', 3],
-    ['Tim Dunkin', 'PF', 3], ['Majik Jonson', 'PG', 3], ['Hakim Olajuwan', 'C', 3], ['Larry Byrd', 'SF', 3],
-    ['Jayson Tatem', 'SF', 2], ['Anthony Davison', 'PF', 2], ['Damion Lillford', 'PG', 2], ['Kawhan Lennard', 'SF', 2],
-    ['Jimmy Butlers', 'SF', 2], ['Devin Booke', 'SG', 2], ['Ja Morantez', 'PG', 2], ['Zion Williamsson', 'PF', 2],
-    ['Kyrie Irvington', 'PG', 2], ['Jamal Harding', 'SG', 2], ['Anton Edwardson', 'SG', 2], ['Trey Youngs', 'PG', 2],
-    ['Donavon Mitchum', 'SG', 2], ['Jalen Brunsen', 'PG', 2], ['Tyreek Halliburg', 'PG', 2], ['Paulo Bancheri', 'PF', 2],
-    ['Dirk Nowinski', 'PF', 2], ['Allan Iverston', 'SG', 2], ['Dwayne Wadey', 'SG', 2], ['Kevan Garnet', 'PF', 2],
-    ['Arvydas Sabonauskas', 'C', 2], ['Domantas Sabonaitis', 'C', 2], ['Kris Paulson', 'PG', 2], ['Russel Eastbrook', 'PG', 2],
-    ['Steve Nashe', 'PG', 2], ['Charles Barkly', 'PF', 2], ['Scotty Pippin', 'SF', 2], ['Vince Cartier', 'SG', 2],
-    ['Tracy McGravy', 'SG', 2], ['Jaylen Browne', 'SG', 2], ['Bam Adebayor', 'C', 2], ['Cade Cunninghan', 'PG', 2],
-    ['Clay Thomason', 'SG', 1], ['Draymon Greene', 'PF', 1], ['Paul Georges', 'SF', 1], ['Karl-Antoine Townes', 'C', 1],
-    ['Rudi Gobair', 'C', 1], ["De'Aron Foxx", 'PG', 1], ['Jonas Valančiauskas', 'C', 1], ['Kristaps Porzingeris', 'C', 1],
-    ['Denis Rodmann', 'PF', 1], ['Ray Allan', 'SG', 1], ['Pau Gasolo', 'C', 1], ['Toni Parkour', 'PG', 1],
-    ['LaMelo Bell', 'PG', 1], ['Zack LaVeen', 'SG', 1], ['Mikal Bridgers', 'SF', 1], ['Jrue Holliday', 'PG', 1],
-    ['Alperen Sengunn', 'C', 1], ['Evan Mobly', 'PF', 1], ['Franz Wagnor', 'SF', 1], ['Scottie Barnez', 'PF', 1],
-    ['Chet Holmgrin', 'C', 1], ['Brandon Ingrim', 'SF', 1], ['Derrick Rosen', 'PG', 1], ['Manu Ginobelli', 'SG', 1]
+    ['LeBron James', 'SF', 3], ['Stephen Curry', 'PG', 3], ['Kevin Durant', 'SF', 3], ['Giannis Antetokounmpo', 'PF', 3],
+    ['Nikola Jokić', 'C', 3], ['Luka Dončić', 'PG', 3], ['Joel Embiid', 'C', 3], ['Shai Gilgeous-Alexander', 'PG', 3],
+    ['Victor Wembanyama', 'C', 3], ['Michael Jordan', 'SG', 3], ['Kobe Bryant', 'SG', 3], ["Shaquille O'Neal", 'C', 3],
+    ['Tim Duncan', 'PF', 3], ['Magic Johnson', 'PG', 3], ['Hakeem Olajuwon', 'C', 3], ['Larry Bird', 'SF', 3],
+    ['Jayson Tatum', 'SF', 2], ['Anthony Davis', 'PF', 2], ['Damian Lillard', 'PG', 2], ['Kawhi Leonard', 'SF', 2],
+    ['Jimmy Butler', 'SF', 2], ['Devin Booker', 'SG', 2], ['Ja Morant', 'PG', 2], ['Zion Williamson', 'PF', 2],
+    ['Kyrie Irving', 'PG', 2], ['James Harden', 'SG', 2], ['Anthony Edwards', 'SG', 2, 'Anthony Edwards (basketball)'], ['Trae Young', 'PG', 2],
+    ['Donovan Mitchell', 'SG', 2], ['Jalen Brunson', 'PG', 2], ['Tyrese Haliburton', 'PG', 2], ['Paolo Banchero', 'PF', 2],
+    ['Dirk Nowitzki', 'PF', 2], ['Allen Iverson', 'SG', 2], ['Dwyane Wade', 'SG', 2], ['Kevin Garnett', 'PF', 2],
+    ['Arvydas Sabonis', 'C', 2], ['Domantas Sabonis', 'C', 2], ['Chris Paul', 'PG', 2], ['Russell Westbrook', 'PG', 2],
+    ['Steve Nash', 'PG', 2], ['Charles Barkley', 'PF', 2], ['Scottie Pippen', 'SF', 2], ['Vince Carter', 'SG', 2],
+    ['Tracy McGrady', 'SG', 2], ['Jaylen Brown', 'SG', 2], ['Bam Adebayo', 'C', 2], ['Cade Cunningham', 'PG', 2],
+    ['Klay Thompson', 'SG', 1], ['Draymond Green', 'PF', 1], ['Paul George', 'SF', 1], ['Karl-Anthony Towns', 'C', 1],
+    ['Rudy Gobert', 'C', 1], ["De'Aaron Fox", 'PG', 1], ['Jonas Valančiūnas', 'C', 1], ['Kristaps Porziņģis', 'C', 1],
+    ['Dennis Rodman', 'PF', 1], ['Ray Allen', 'SG', 1], ['Pau Gasol', 'C', 1], ['Tony Parker', 'PG', 1],
+    ['LaMelo Ball', 'PG', 1], ['Zach LaVine', 'SG', 1], ['Mikal Bridges', 'SF', 1], ['Jrue Holiday', 'PG', 1],
+    ['Alperen Şengün', 'C', 1], ['Evan Mobley', 'PF', 1], ['Franz Wagner', 'SF', 1], ['Scottie Barnes', 'PF', 1],
+    ['Chet Holmgren', 'C', 1], ['Brandon Ingram', 'SF', 1], ['Derrick Rose', 'PG', 1], ['Manu Ginóbili', 'SG', 1]
   ];
 
   // Stat ranges per position: inside/outside scoring, inside/outside defense
@@ -43,6 +44,7 @@
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
   const BENCH = 3, BENCH_FC = 1; // 3 bench players: 1 frontcourt + 2 backcourt
   const STAMINA = 5, FATIGUE = 0.9; // each attack burns a bar and leaves 90% of every rating
+  const DEF_FLOOR = 20; // beaten or tired defenses never drop below this (0 brings back forced subs and wide-open hits)
   const DEF_REGEN = 0.2; // a benched defense that hit 0 recovers 20% of its base value per turn
   const STATS = ['ins', 'out', 'idef', 'odef'];
   const GROUP = { PF: 'FC', C: 'FC', PG: 'BC', SG: 'BC', SF: 'BC' };
@@ -79,7 +81,7 @@
     const names = opts.names || ['Player 1', 'Player 2'];
     const used = new Set(); // one player pool: no name appears in both decks
     return {
-      ver: 3, hpMax: hp,
+      ver: 4, hpMax: hp,
       players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: makeDeck(DECK, used), ready: false })),
       phase: 'setup', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
     };
@@ -184,7 +186,7 @@
         // A defender already at 0 is wide open: the full attack goes to HP.
         const dmg = av - dv, open = dv === 0;
         op.hp = Math.max(0, op.hp - dmg);
-        def[dk] = Math.max(0, dv - dmg);
+        def[dk] = Math.max(Math.min(DEF_FLOOR, dv), dv - dmg);
         s.subOk = true; // successful attack opens subs for the rest of this turn
         Object.assign(evA, { result: 'score', dmg, open, hpAfter: op.hp, defAfter: def[dk] });
         log(s, p, 'score', open
@@ -202,6 +204,7 @@
       }
       atk.sta -= 1;
       STATS.forEach(k => { atk[k] = Math.round(atk[k] * FATIGUE); });
+      ['idef', 'odef'].forEach(k => { atk[k] = Math.max(atk[k], Math.min(DEF_FLOOR, evA.atk[k])); });
       Object.assign(evA, { sta: atk.sta, statAfter: atk[sk] });
       ev.push(evA);
       if (op.hp <= 0) {
@@ -301,5 +304,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, DEF_FLOOR };
 });

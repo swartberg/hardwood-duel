@@ -167,6 +167,10 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     radial-gradient(circle at 50% 135%, transparent 30%, color-mix(in srgb, var(--frame) 18%, transparent) 31%, transparent 33%),
     linear-gradient(180deg, color-mix(in srgb, var(--frame) 12%, transparent), transparent);
   border:1px solid rgba(255,255,255,.05)}
+.art .photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;z-index:1}
+.credits{max-height:min(60vh,520px);overflow:auto;text-align:left;font-size:13px;color:var(--muted);display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.credits b{color:var(--fg);font-weight:600}
+.credits a{color:var(--opp)}
 .art .sil{position:absolute;left:50%;bottom:0;translate:-50% 0;height:94%;max-width:96%;width:auto;fill:color-mix(in srgb, var(--frame) 32%, #0b111c);stroke:color-mix(in srgb, var(--frame) 60%, transparent);stroke-width:1.2}
 .sta{display:flex;gap:1.6cqw;padding:0 1cqw}
 .sta i{flex:1;height:max(2px,3.6cqw);border-radius:2cqw;background:var(--good);box-shadow:0 0 6px -1px var(--good)}
@@ -310,14 +314,13 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
       <ol>
         <li><b>Set your eight.</b> From your 12 cards pick 5 starters (2 frontcourt PF/C, 3 backcourt PG/SG/SF) and a 3-player bench (1 frontcourt, 2 backcourt). The other four sit out. Your opponent sees only card backs.</li>
         <li><b>Subs:</b> only after a successful attack (that turn) or a successful defense (your next turn), frontcourt for frontcourt and backcourt for backcourt. Resting players get 1 stamina bar back each turn.</li>
-        <li><b>0 defense:</b> a starter whose inside or outside defense hits 0 must be subbed out. On the bench that defense recovers 20% per turn, and they can't come back while it is still 0.</li>
         <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip.</li>
         <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
-        <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type.</li>
-        <li><b>Wide open:</b> if no healthy bench player can replace them, a defender at 0 lets the full attack through to HP.</li>
+        <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type. Defense never drops below 20.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
         <li>Every name is unique: you and your opponent never share a player.</li>
       </ol>
+      <button class="btn ghost" id="credits" style="margin-top:12px;padding:5px 10px;font-size:12px">Photo credits</button>
     </div>
   </section>
 </main>
@@ -421,10 +424,70 @@ const sfx = (() => {
   };
 })();
 
+/* ---------- player photos ----------
+   Each player's lead photo on English Wikipedia (only freely licensed images qualify), looked up in the
+   viewer's browser and credited with the author and license from the file's Commons metadata.
+   Cards show the silhouette until a photo loads, or when a player has none. */
+const photos = (() => {
+  const KEY = 'hd.photos.v1', TTL = 7 * 864e5, API = 'https://en.wikipedia.org/w/api.php?format=json&formatversion=2&origin=*&action=query&';
+  let map = {};
+  try { const c = JSON.parse(store.get(KEY) || 'null'); if (c && Date.now() - c.t < TTL) map = c.map || {}; } catch (e) {}
+  const text = html => { const d = document.createElement('div'); d.innerHTML = String(html || ''); return d.textContent.trim().replace(/\s+/g, ' '); };
+  const chunks = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+  const get = q => fetch(API + q).then(r => (r.ok ? r.json() : Promise.reject(new Error(r.status))));
+  // follow normalized titles and redirects from what was asked to the page that answered
+  function resolver(q) {
+    const hop = {};
+    (q.normalized || []).concat(q.redirects || []).forEach(x => { hop[x.from] = x.to; });
+    return t => { for (let i = 0; i < 4 && hop[t]; i++) t = hop[t]; return t; };
+  }
+  async function load() {
+    if (Object.keys(map).length) return false;
+    const want = E.ROSTER.map(r => ({ name: r[0], title: r[3] || r[0] }));
+    const found = {};
+    for (const part of chunks(want, 50)) {
+      const d = await get('redirects=1&prop=pageimages|pageprops&piprop=thumbnail|name&pithumbsize=360&pilimit=50&ppprop=disambiguation&titles=' + encodeURIComponent(part.map(w => w.title).join('|')));
+      const q = d.query || {}, to = resolver(q), pages = {};
+      (q.pages || []).forEach(pg => { pages[pg.title] = pg; });
+      part.forEach(w => {
+        const pg = pages[to(w.title)];
+        if (pg && pg.thumbnail && pg.pageimage && !(pg.pageprops && 'disambiguation' in pg.pageprops)) found[w.name] = { src: pg.thumbnail.source, file: pg.pageimage, page: pg.title };
+      });
+    }
+    const files = [...new Set(Object.values(found).map(f => 'File:' + f.file))];
+    const meta = {};
+    for (const part of chunks(files, 50)) {
+      const d = await get('prop=imageinfo&iiprop=extmetadata|url&iiextmetadatafilter=Artist|LicenseShortName|LicenseUrl&titles=' + encodeURIComponent(part.join('|')));
+      const q = d.query || {}, to = resolver(q), pages = {};
+      (q.pages || []).forEach(pg => { pages[pg.title] = pg; });
+      part.forEach(f => {
+        const ii = (pages[to(f)] || {}).imageinfo, m = ii && ii[0] && ii[0].extmetadata;
+        if (m) meta[f] = { artist: text(m.Artist && m.Artist.value) || 'Unknown', license: text(m.LicenseShortName && m.LicenseShortName.value), licenseUrl: (m.LicenseUrl && m.LicenseUrl.value) || '', url: ii[0].descriptionurl || '' };
+      });
+    }
+    // keep only photos we can credit
+    const next = {};
+    Object.entries(found).forEach(([name, f]) => { const m = meta['File:' + f.file]; if (m && m.license) next[name] = Object.assign({ src: f.src }, m); });
+    map = next;
+    store.set(KEY, JSON.stringify({ t: Date.now(), map }));
+    return true;
+  }
+  return {
+    of: name => map[name] || null,
+    all: () => map,
+    load: () => load().catch(err => { console.warn('Player photos unavailable:', err); return false; })
+  };
+})();
+
 /* ---------- card markup ---------- */
 const BACK = '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="50" cy="50" r="38"/><path d="M12 50h76M50 12v76"/><path d="M24 22c14 14 14 42 0 56M76 22c-14 14-14 42 0 56"/></svg>';
 // Placeholder player picture until real card art exists.
 const SIL = '<svg class="sil" viewBox="0 0 120 84" aria-hidden="true"><circle cx="60" cy="25" r="19"/><path d="M8 86c0-27 22-40 52-40s52 13 52 40z"/></svg>';
+function photoHTML(name) {
+  const ph = photos.of(name);
+  if (!ph) return '';
+  return `<img class="photo" src="${esc(ph.src)}" alt="" loading="lazy" referrerpolicy="no-referrer" title="${esc(`Photo: ${ph.artist}, ${ph.license} (Wikimedia Commons)`)}" onerror="this.remove()">`;
+}
 function staHTML(n) {
   const max = E.STAMINA, lvl = n >= 3 ? '' : n === 2 ? ' mid' : ' low';
   return `<div class="sta${lvl}" title="Stamina ${n}/${max}">${Array.from({ length: max }, (_, i) => `<i${i < n ? '' : ' class="off"'}></i>`).join('')}</div>`;
@@ -432,7 +495,7 @@ function staHTML(n) {
 function frontHTML(c, side) {
   const cls = (v, v0) => (v === 0 ? ' zero' : v < v0 ? ' hurt' : '');
   return `<div class="f-top"><span class="pos">${c.pos}<i>${c.grp}</i></span><span class="tier">${'★'.repeat(c.tier)}</span></div>
-    <div class="art">${SIL}</div>${staHTML(c.sta)}
+    <div class="art">${SIL}${photoHTML(c.name)}</div>${staHTML(c.sta)}
     <div class="nm">${esc(c.name)}</div>
     <div class="st"><span></span><span class="hd">IN</span><span class="hd">OUT</span>
       <span class="lb atk">ATK</span><span class="v atk${cls(c.ins, c.ins0)}">${c.ins}</span><span class="v atk${cls(c.out, c.out0)}">${c.out}</span>
@@ -952,13 +1015,29 @@ $('#joinRoom').addEventListener('click', () => goOnline('join'));
 $('#joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') goOnline('join'); });
 
 // hero fan
-$('#fan').innerHTML = E.makeDeck(12).sort((a, b) => b.tier - a.tier).slice(0, 3).map(c => cardHTML(c, 'menu', '', 'tabindex="-1"')).join('');
+const fanCards = E.makeDeck(12).sort((a, b) => b.tier - a.tier).slice(0, 3);
+const drawFan = () => { $('#fan').innerHTML = fanCards.map(c => cardHTML(c, 'menu', '', 'tabindex="-1"')).join(''); };
+drawFan();
+photos.load().then(fresh => { if (fresh) { drawFan(); if (view) render(); } });
+
+$('#credits').addEventListener('click', () => {
+  closeModal();
+  const list = Object.entries(photos.all()).sort((a, b) => a[0].localeCompare(b[0]));
+  const lic = ph => (ph.licenseUrl ? `<a href="${esc(ph.licenseUrl)}" target="_blank" rel="noopener">${esc(ph.license)}</a>` : esc(ph.license));
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'overModal';
+  m.innerHTML = `<div class="panel box" style="max-width:560px"><span class="eyebrow">Photo credits</span>
+    <p>Player photos come from Wikimedia Commons under the licenses listed. Players without a free photo show a silhouette.</p>
+    ${list.length ? `<ul class="credits">${list.map(([name, ph]) => `<li><b>${esc(name)}</b> · <a href="${esc(ph.url)}" target="_blank" rel="noopener">photo</a> by ${esc(ph.artist)} · ${lic(ph)}</li>`).join('')}</ul>` : '<p>No photos are loaded right now.</p>'}
+    <div class="row" style="justify-content:center"><button class="btn primary" data-close>Close</button></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModal(); });
+});
 
 /* ---------- keep a running bot game across page updates ---------- */
 const hot = window.claude && window.claude.hot;
 if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (ctl && !ctl.online && ctl.s ? { s: ctl.s, hp: ctl.hp } : {}));
 const boot = d => {
-  if (d && d.s && d.s.ver === 3 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
+  if (d && d.s && d.s.ver === 4 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
 };
 if (hot && typeof hot.ready === 'function') hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
 })();
