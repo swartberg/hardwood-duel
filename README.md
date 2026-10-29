@@ -30,7 +30,7 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 - `CREDITS`, `PACK` — 20 draft credits; each pack shows 5 players of one tier and costs its tier (5 Superstar … 1 Bench Warmer).
 - `TIER_BONUS` — stat bonus or penalty per tier (Superstar +8 … Bench Warmer −12).
 - `FIELD`, `BENCH` — 5 starters (2 FC + 3 BC) and a 3-player bench (1 FC + 2 BC), set from the 8 drafted players.
-- `STAMINA`, `FATIGUE` — 5 stamina bars per card; each attack uses one and multiplies all four ratings by 0.9.
+- `STAMINA`, `FATIGUE`, `CROSS_COST` — 5 stamina bars per card; an attack uses 1 bar against the same court group and 2 against the other (backcourt vs frontcourt), and each bar used multiplies all four ratings by 0.9.
 - `DEF_FLOOR` — lowest a defense can drop (20). Set it to 0 to bring back forced subs at 0 defense and wide-open hits.
 - `DEF_REGEN` — share of base value a benched 0-defense recovers per turn (0.2).
 - `botStep` — bot lineup, sub and attack choices.

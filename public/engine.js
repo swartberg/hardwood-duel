@@ -58,7 +58,10 @@
   const FRONT = 2;
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
   const BENCH = 3, BENCH_FC = 1; // 3 bench players: 1 frontcourt + 2 backcourt
-  const STAMINA = 5, FATIGUE = 0.9; // each attack burns a bar and leaves 90% of every rating
+  const STAMINA = 5, FATIGUE = 0.9; // each stamina bar burned leaves 90% of every rating
+  const CROSS_COST = 2; // attacking a player from the other court group (backcourt vs frontcourt) burns 2 bars
+  // Stamina an attack costs: 1 bar against the same court group, 2 against the other one.
+  const attackCost = (atkSlot, targetSlot) => (slotGroup(atkSlot) === slotGroup(targetSlot) ? 1 : CROSS_COST);
   const DEF_FLOOR = 20; // beaten or tired defenses never drop below this (0 brings back forced subs and wide-open hits)
   const DEF_REGEN = 0.2; // a benched defense that hit 0 recovers 20% of its base value per turn
   const STATS = ['ins', 'out', 'idef', 'odef'];
@@ -246,6 +249,8 @@
       if (!atk) return { ok: false, error: 'Choose one of your starters to attack with.' };
       if (!def) return { ok: false, error: 'Choose an opponent card to attack.' };
       if (atk.sta <= 0) return { ok: false, error: `${atk.name} is out of stamina.` };
+      const cost = attackCost(slot, target);
+      if (atk.sta < cost) return { ok: false, error: `Attacking out of position costs ${cost} stamina bars. ${atk.name} has ${atk.sta}.` };
       atk.revealed = true; def.revealed = true;
       const sk = kind === 'inside' ? 'ins' : 'out', dk = kind === 'inside' ? 'idef' : 'odef';
       const av = atk[sk], dv = def[dk];
@@ -273,10 +278,10 @@
         Object.assign(evA, { result: 'tie' });
         log(s, p, 'tie', `${atk.name} and ${def.name} cancel out at ${av}.`);
       }
-      atk.sta -= 1;
-      STATS.forEach(k => { atk[k] = Math.round(atk[k] * FATIGUE); });
+      atk.sta -= cost;
+      for (let i = 0; i < cost; i++) STATS.forEach(k => { atk[k] = Math.round(atk[k] * FATIGUE); });
       ['idef', 'odef'].forEach(k => { atk[k] = Math.max(atk[k], Math.min(DEF_FLOOR, evA.atk[k])); });
-      Object.assign(evA, { sta: atk.sta, statAfter: atk[sk] });
+      Object.assign(evA, { sta: atk.sta, cost, statAfter: atk[sk] });
       ev.push(evA);
       if (op.hp <= 0) {
         s.phase = 'over'; s.winner = p;
@@ -355,6 +360,9 @@
     return { t: 'open', tier: open[i] };
   }
 
+  // Bot's guess for a face-down defender: the court row gives away the position group.
+  const GUESS = { FC: { inside: 80, outside: 61 }, BC: { inside: 62, outside: 74 } };
+
   function botStep(s, p) {
     const me = s.players[p], op = s.players[1 - p];
     if (s.phase === 'draft') {
@@ -379,12 +387,14 @@
       me.field.forEach((a, i) => {
         if (!a || a.sta <= 0) return;
         op.field.forEach((t, j) => {
-          if (!t) return;
+          const cost = attackCost(i, j);
+          if (!t || a.sta < cost) return;
           ['inside', 'outside'].forEach(k => {
             const av = k === 'inside' ? a.ins : a.out;
-            const dv = t.revealed ? (k === 'inside' ? t.idef : t.odef) : 71;
+            const dv = t.revealed ? (k === 'inside' ? t.idef : t.odef) : GUESS[slotGroup(j)][k];
             const d = av - dv;
             let sc = d > 0 ? d : d * 0.45;
+            if (cost > 1) sc -= 8; // the extra bar is worth something
             if (!t.revealed) sc -= 2;
             sc += (Math.random() - 0.5) * 6;
             if (!best || sc > best.sc) best = { sc, slot: i, target: j, kind: k };
@@ -396,5 +406,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, DEF_FLOOR, CREDITS, PACK, TIER_NAME, TEAM, draftStep };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, CROSS_COST, attackCost, DEF_FLOOR, CREDITS, PACK, TIER_NAME, TEAM, draftStep };
 });
