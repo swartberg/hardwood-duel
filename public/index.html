@@ -149,14 +149,40 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 .card.is-hidden .inner{transform:rotateY(180deg)}
 .face{position:absolute;inset:0;border-radius:9px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
 .card{--frame:var(--steel)}
-.card.t3{--frame:var(--gold)}.card.t2{--frame:var(--silver)}
+.card.t5,.pack.t5{--frame:var(--gold)}.card.t4,.pack.t4{--frame:var(--silver)}.card.t3,.pack.t3{--frame:#6fa8dc}.card.t2,.pack.t2{--frame:#c98b55}.card.t1,.pack.t1{--frame:var(--steel)}
 .front{
   background:linear-gradient(165deg,#172133 0%,#0b111c 55%,#080c14 100%);
   border:1px solid color-mix(in srgb, var(--frame) 75%, transparent);
   box-shadow:0 0 16px -6px var(--frame), inset 0 0 0 1px rgba(255,255,255,.03);
   display:flex;flex-direction:column;padding:5cqw;gap:3cqw
 }
-.card.t3 .front{background:linear-gradient(165deg,#2a2412 0%,#121018 50%,#080c14 100%)}
+.card.t5 .front{background:linear-gradient(165deg,#2a2412 0%,#121018 50%,#080c14 100%)}
+
+/* ---------- Draft ---------- */
+.draft{padding:14px;display:grid;gap:16px}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.coins{font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;color:var(--gold);text-shadow:0 0 12px rgba(255,207,92,.5);font-variant-numeric:tabular-nums}
+.coins small{font-size:13px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-left:6px;text-shadow:none}
+.dneed{font-size:13px;color:var(--muted)}.dneed b{color:var(--fg)}
+.packs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.pack{--frame:var(--steel);position:relative;aspect-ratio:3/4;border-radius:12px;border:1px solid color-mix(in srgb,var(--frame) 70%,transparent);background:linear-gradient(160deg,color-mix(in srgb,var(--frame) 30%,#0b111c),#080c14 72%);box-shadow:0 0 18px -6px var(--frame);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;overflow:hidden;transition:transform .2s, box-shadow .2s, opacity .2s;text-align:center;min-width:0}
+.pack::before{content:"";position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.16) 50%,transparent 58%);transform:translateX(-60%);transition:transform .9s;pointer-events:none}
+.pack:hover:not(:disabled){transform:translateY(-4px);box-shadow:0 0 28px -4px var(--frame)}
+.pack:hover:not(:disabled)::before{transform:translateX(60%)}
+.pack:disabled{opacity:.28;cursor:not-allowed}
+.pk-price{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,5vw,44px);line-height:1;color:var(--frame)}
+.pk-price small{font-size:.32em;letter-spacing:.12em;margin-left:3px}
+.pk-name{font-family:var(--f-display);font-weight:700;font-size:clamp(12px,1.6vw,16px);letter-spacing:.06em;text-transform:uppercase;line-height:1.05}
+.pk-stars{color:var(--frame);font-size:10px;letter-spacing:1px}
+.pk-sub{font-size:11px;color:var(--muted)}
+.opened{display:grid;gap:10px;justify-items:center}
+.pcards{display:flex;gap:var(--gap);flex-wrap:wrap;justify-content:center}
+.pcards .card:hover{transform:translateY(-6px)}
+.card.flipin .inner{animation:flipin .7s cubic-bezier(.3,.7,.2,1) both;animation-delay:var(--d,0ms)}
+@keyframes flipin{from{transform:rotateY(180deg) scale(.85)}}
+.team{display:grid;gap:8px}
+.tcards{display:flex;gap:var(--gap);flex-wrap:wrap;--cw:calc(var(--cw-base) * .62)}
+@media (max-width:560px){.packs{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .f-top{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-display);font-weight:700;line-height:1}
 .pos i{font-style:normal;opacity:.6;margin-left:.35em}
 .pos{font-size:max(8px,10cqw);letter-spacing:.06em;padding:1.5cqw 3.5cqw;border:1px solid color-mix(in srgb, var(--frame) 60%, transparent);border-radius:3cqw;color:var(--frame)}
@@ -276,9 +302,9 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 
 <main id="menu">
   <section class="hero">
-    <div class="eyebrow">Street-legal card battler · 5 v 5</div>
+    <div class="eyebrow">Pack-draft card battler · 5 v 5</div>
     <h1>Hardwood<span>Duel</span></h1>
-    <p>Pick a starting five and a three-player bench from a random twelve-card deck. Keep your lineup face down, attack inside or outside, and manage stamina. Beat a defender and the difference comes off their HP and their defense. Lose the matchup and your scorer pays for it.</p>
+    <p>Spend 15 credits opening player packs to draft an eight-man team, then set a starting five and a bench. Keep your lineup face down, attack inside or outside, and manage stamina. Beat a defender and the difference comes off their HP and their defense. Lose the matchup and your scorer pays for it.</p>
     <div class="fan" id="fan"></div>
   </section>
   <section class="modes">
@@ -312,9 +338,10 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     <div class="panel rules">
       <div class="eyebrow">How a turn works</div>
       <ol>
-        <li><b>Set your eight.</b> From your 12 cards pick 5 starters (2 frontcourt PF/C, 3 backcourt PG/SG/SF) and a 3-player bench (1 frontcourt, 2 backcourt). The other four sit out. Your opponent sees only card backs.</li>
+        <li><b>Draft.</b> You have 15 credits. Packs cost 5 (Superstars), 4 (All-Stars), 3 (Starters), 2 (Role Players) or 1 (Bench Warmers). Each pack shows 5 players of that tier and you keep 1. Draft 8 players: 3 frontcourt (PF, C) and 5 backcourt (PG, SG, SF).</li>
+        <li><b>Set your lineup.</b> 5 starters (2 frontcourt, 3 backcourt) and a 3-player bench (1 frontcourt, 2 backcourt). Your opponent sees only card backs.</li>
         <li><b>Subs:</b> only after a successful attack (that turn) or a successful defense (your next turn), frontcourt for frontcourt and backcourt for backcourt. Resting players get 1 stamina bar back each turn.</li>
-        <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip.</li>
+        <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip face up for the rest of that turn, then turn face down again.</li>
         <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
         <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type. Defense never drops below 20.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
@@ -339,6 +366,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
       <div class="hint" id="hint"></div>
       <div class="actions" id="actions"></div>
     </div>
+    <div class="panel draft" id="draft" hidden></div>
     <div class="field me" id="myField"></div>
     <div class="panel side-head me">
       <div class="who"><i></i><span id="myName">You</span></div>
@@ -411,6 +439,7 @@ const sfx = (() => {
     hit: c => { tone(c, 150, .28, { to: 55, vol: .3 }); noise(c, .08, { f: 700, vol: .18 }); },
     block: c => { tone(c, 210, .2, { type: 'square', to: 90, vol: .08 }); noise(c, .14, { filter: 'lowpass', f: 600, vol: .3 }); },
     tie: c => tone(c, 330, .22, { type: 'triangle', vol: .09 }),
+    pack: c => { noise(c, .35, { f: 600, to: 4000, q: .6, vol: .16 }); [523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, f, .16, { type: 'triangle', vol: .07, at: .18 + i * .07 })); },
     sub: c => { tone(c, 520, .09, { type: 'triangle', vol: .08 }); tone(c, 390, .12, { type: 'triangle', vol: .08, at: .08 }); },
     err: c => tone(c, 160, .14, { type: 'sawtooth', vol: .05 }),
     buzzer: c => tone(c, 110, .6, { type: 'sawtooth', vol: .09 }),
@@ -500,11 +529,11 @@ function frontHTML(c, side) {
     <div class="st"><span></span><span class="hd">IN</span><span class="hd">OUT</span>
       <span class="lb atk">ATK</span><span class="v atk${cls(c.ins, c.ins0)}">${c.ins}</span><span class="v atk${cls(c.out, c.out0)}">${c.out}</span>
       <span class="lb def">DEF</span><span class="v def${cls(c.idef, c.idef0)}">${c.idef}</span><span class="v def${cls(c.odef, c.odef0)}">${c.odef}</span></div>
-    ${c.revealed && side === 'me' ? '<span class="seen" title="Your opponent has seen this card">SEEN</span>' : ''}`;
+    ${c.revealed && side === 'me' ? '<span class="seen" title="Your opponent can see this card until the turn ends">SEEN</span>' : ''}`;
 }
 function cardHTML(c, side, cls = '', attrs = '') {
   const hidden = !!c.hidden;
-  const label = hidden ? `Face-down card, stamina ${c.sta}` : `${c.name}, ${c.pos}. Attack inside ${c.ins}, outside ${c.out}. Defense inside ${c.idef}, outside ${c.odef}. Stamina ${c.sta} of ${E.STAMINA}`;
+  const label = hidden ? 'Face-down card' : `${c.name}, ${c.pos}. Attack inside ${c.ins}, outside ${c.out}. Defense inside ${c.idef}, outside ${c.odef}. Stamina ${c.sta} of ${E.STAMINA}`;
   return `<div class="card ${hidden ? 'is-hidden' : 't' + c.tier} ${cls}" data-id="${c.id}" tabindex="0" role="button" aria-label="${esc(label)}" ${attrs}>
     <div class="inner"><div class="face front">${hidden ? '' : frontHTML(c, side)}</div><div class="face back">${BACK}${hidden && c.sta != null ? staHTML(c.sta) : ''}</div></div></div>`;
 }
@@ -512,7 +541,8 @@ function cardHTML(c, side, cls = '', attrs = '') {
 /* ---------- state ---------- */
 let ctl = null, view = null, busy = Promise.resolve();
 let hpSel = Number(store.get('hd.hp')) || 100;
-const ui = { sel: null, kind: null, pick: [], bpick: [], peek: null };
+const ui = { sel: null, kind: null, pick: [], bpick: [], peek: null, autoDraft: false, autoTimer: null, packKey: null };
+let lastOpp = {}; // face-up opponent cards from the previous render, to animate them turning back over
 const seenIds = { me: new Set(), opp: new Set(), bench: new Set() };
 
 function queue(v, events) {
@@ -523,10 +553,13 @@ async function play(v, events) {
   for (const ev of events) if (ev.e === 'attack') await animAttack(ev, v);
   if (events.some(e => e.e === 'ready' && e.p === v.you)) sfx.play('lock');
   if (events.some(e => e.e === 'swap')) sfx.play('sub');
+  if (events.some(e => e.e === 'pack' && e.p === v.you)) sfx.play('pack');
+  if (events.some(e => e.e === 'picked' && e.p === v.you)) sfx.play('lock');
   view = v;
   if (events.some(e => e.e === 'turn' || e.e === 'start')) { ui.sel = null; ui.kind = null; ui.peek = null; }
   render();
   for (const ev of events) {
+    if (ev.e === 'drafted') { sfx.play('turn'); await banner('Draft complete', 'Set your lineup', true); }
     if (ev.e === 'start') sfx.play('whistle');
     else if (ev.e === 'turn' && v.phase === 'play') sfx.play('turn');
     if (ev.e === 'start') await banner(ev.first === v.you ? 'Your ball' : 'Their ball', 'Tip-off', ev.first === v.you);
@@ -553,14 +586,25 @@ function render() {
   const setup = v.phase === 'setup';
   const targeting = v.phase === 'play' && v.myTurn && ui.kind && ui.sel && ui.sel.type === 'field';
 
-  // both fields: backcourt on the upper row, frontcourt on the bottom row
+  const drafting = v.phase === 'draft';
+  $('#draft').hidden = !drafting;
+  $('#oppField').hidden = $('#myField').hidden = drafting;
+  if (drafting) renderDraft(v);
+
+  // both fields: backcourt on the upper row, frontcourt on the bottom row.
+  // A card that was face up and is now hidden is drawn face up once more, then flipped over.
+  const flipBack = [];
   $('#oppField').innerHTML = formation(v.opp.field, 'opp', (c, i) => {
-    const cls = [!seenIds.opp.has(c.id) && seenIds.opp.size ? 'enter' : '', targeting ? 'target' : '', ui.peek === c.id ? 'peek' : '', c.sta <= 0 ? 'tired' : ''].join(' ');
+    if (c.hidden && lastOpp[i]) { flipBack.push(i); return cardHTML(lastOpp[i], 'opp'); }
+    const cls = [targeting ? 'target' : '', ui.peek === c.id ? 'peek' : '', c.sta <= 0 ? 'tired' : ''].join(' ');
     return cardHTML(c, 'opp', cls);
   });
+  lastOpp = {};
+  v.opp.field.forEach((c, i) => { if (c && !c.hidden) lastOpp[i] = c; });
+  if (flipBack.length) requestAnimationFrame(() => requestAnimationFrame(() => flipBack.forEach(i => { const el = cardAt('opp', i); if (el) el.classList.add('is-hidden'); })));
 
   // opponent bench: small cards, face down until seen
-  $('#oppBench').hidden = setup;
+  $('#oppBench').hidden = setup || drafting;
   $('#oppBench').innerHTML = '<span class="bl">Bench</span>' + v.opp.bench.map(c => `<div class="slot">${cardHTML(c, 'opp', '', 'tabindex="-1"')}</div>`).join('');
 
   // sub highlighting: green = valid partner for the selected card, dim = not
@@ -582,10 +626,10 @@ function render() {
 
   // setup: the 12-card deck to pick from. play: the 3-player bench.
   const picking = setup && !v.me.ready;
-  $('.benchwrap').hidden = setup && v.me.ready;
+  $('.benchwrap').hidden = drafting || (setup && v.me.ready);
   const inGrp = (list, g) => list.filter(id => (v.me.bench.find(c => c.id === id) || {}).grp === g).length;
   if (picking) {
-    $('#benchTitle').textContent = 'Your deck · pick 5 starters, then 3 bench';
+    $('#benchTitle').textContent = 'Your team · pick 5 starters, then 3 bench';
     $('#benchSub').textContent = `${ui.pick.length} / 5 starters · ${ui.bpick.length} / 3 bench`;
     $('#benchSub').className = 'eyebrow benchsub';
   } else {
@@ -615,11 +659,40 @@ function render() {
   seenIds.bench = new Set(v.me.bench.map(c => c.id));
 
   renderMid();
+  if (ui.autoDraft && drafting && !v.me.drafted && !ui.autoTimer) {
+    ui.autoTimer = setTimeout(() => {
+      ui.autoTimer = null;
+      if (!view || view.phase !== 'draft' || !ui.autoDraft) return;
+      const a = E.draftStep(view.me);
+      if (a) act(a); else { ui.autoDraft = false; render(); }
+    }, T(600));
+  }
   $('#log').innerHTML = v.log.length
     ? v.log.map(l => `<li class="${l.mine ? 'mine' : ''} ${l.kind}">${esc(l.text)}</li>`).join('')
     : '<li class="empty">Nothing yet. Set your lineup.</li>';
 }
 
+function renderDraft(v) {
+  const me = v.me, n = me.bench.length;
+  const have = g => me.bench.filter(c => c.grp === g).length;
+  const packs = me.packs.map(pk => `<button class="pack t${pk.tier}" data-pack="${pk.tier}" ${pk.why ? `disabled title="${esc(pk.why)}"` : ''}>
+      <span class="pk-price">${pk.tier}<small>CR</small></span><span class="pk-name">${E.TIER_NAME[pk.tier]}s</span>
+      <span class="pk-stars">${'★'.repeat(pk.tier)}</span><span class="pk-sub">${E.PACK} players · keep 1</span></button>`).join('');
+  let opened = '';
+  if (me.pack) {
+    const key = me.pack.cards.map(c => c.id).join();
+    const fresh = key !== ui.packKey; ui.packKey = key;
+    opened = `<div class="opened"><span class="eyebrow">${E.TIER_NAME[me.pack.tier]} pack · tap one player to keep</span><div class="pcards">${
+      me.pack.cards.map((c, i) => cardHTML(c, 'menu', fresh ? 'flipin' : '', `data-pick="${c.id}" style="--d:${i * 130}ms"`)).join('')}</div></div>`;
+  }
+  const empties = ['FC', 'BC'].flatMap(g => Array(Math.max(0, me.needs[g])).fill(g));
+  const team = me.bench.map(c => `<div class="slot">${cardHTML(c, 'me', '', 'tabindex="-1"')}</div>`).join('')
+    + empties.map(g => `<div class="slot empty" data-n="${g}"></div>`).join('');
+  $('#draft').innerHTML = `<div class="dhead"><div class="coins">${me.credits}<small>credits left</small></div>
+      <div class="dneed">Team <b>${n}/${E.TEAM}</b> · Frontcourt <b>${have('FC')}/3</b> · Backcourt <b>${have('BC')}/5</b> · ${esc(v.opp.name)} <b>${v.opp.count}/${E.TEAM}</b></div></div>
+    ${me.drafted ? '' : `<div class="packs">${packs}</div>`}${opened}
+    <div class="team"><span class="eyebrow">Your team</span><div class="tcards">${team}</div></div>`;
+}
 function formation(cards, side, cell) {
   const slot = i => {
     const c = cards[i], g = E.slotGroup(i);
@@ -646,11 +719,18 @@ function renderMid() {
   const v = view, pill = $('#turnPill'), hint = $('#hint'), act = $('#actions');
   let h = '', a = '';
   pill.className = 'turnpill';
-  if (v.phase === 'setup') {
+  if (v.phase === 'draft') {
+    pill.textContent = 'Draft';
+    const me = v.me;
+    if (me.drafted) h = `Team complete. Waiting for <b>${esc(v.opp.name)}</b> to finish drafting (${v.opp.count}/${E.TEAM})…`;
+    else if (me.pack) h = `Keep one player from your <b>${E.TIER_NAME[me.pack.tier]}</b> pack.`;
+    else h = `Open packs with your <b>${me.credits} credits</b>. You keep 1 of 5 players per pack. Save 1 credit for every open spot.`;
+    if (!me.drafted) a = `<button class="btn ghost" data-act="autodraft">${ui.autoDraft ? 'Stop auto-draft' : 'Auto-draft'}</button>`;
+  } else if (v.phase === 'setup') {
     pill.textContent = 'Lineup';
     if (!v.me.ready) {
       h = ui.pick.length < 5
-        ? `Pick <b>2 frontcourt</b> and <b>3 backcourt</b> starters. They go on court face down.`
+        ? `From your drafted team pick <b>2 frontcourt</b> and <b>3 backcourt</b> starters. They go on court face down.`
         : `Now pick your bench: <b>1 frontcourt</b> and <b>2 backcourt</b>.`;
       a = `<button class="btn ghost" data-act="auto">Auto-pick</button><button class="btn primary" data-act="lock" ${ui.pick.length === 5 && ui.bpick.length === 3 ? '' : 'disabled'}>Lock lineup</button>`;
     } else h = `Lineup locked. Waiting for <b>${esc(v.opp.name)}</b> to set theirs…`;
@@ -683,7 +763,7 @@ function renderMid() {
         a = endBtn;
       }
     }
-    if (peekCard && !ui.kind && !(v.myTurn && v.mustSub.length)) h = peekCard.hidden ? 'Face-down card. Its ratings stay hidden until it is attacked or attacks.' : `<b>${esc(peekCard.name)}</b> · ${statLine(peekCard)}`;
+    if (peekCard && !ui.kind && !(v.myTurn && v.mustSub.length)) h = peekCard.hidden ? 'Face-down card. It flips only for the turn it attacks or is attacked, then turns back over.' : `<b>${esc(peekCard.name)}</b> · ${statLine(peekCard)}`;
   } else {
     pill.textContent = 'Final';
     h = v.winner === -1 ? 'Draw.' : v.winner === v.you ? 'You won.' : `${esc(v.opp.name)} won.`;
@@ -699,6 +779,12 @@ document.addEventListener('click', e => {
   if (!view || $('#game').hidden) return;
   const btn = e.target.closest('[data-act]');
   if (btn) return onButton(btn.dataset.act);
+  if (view.phase === 'draft') {
+    const pk = e.target.closest('[data-pack]'), pc = e.target.closest('[data-pick]');
+    if (pk && !pk.disabled) { ui.autoDraft = false; act({ t: 'open', tier: Number(pk.dataset.pack) }); }
+    else if (pc) { ui.autoDraft = false; act({ t: 'pick', id: pc.dataset.pick }); }
+    return;
+  }
   const slot = e.target.closest('.slot[data-side]');
   if (!slot || !slot.querySelector('.card') || animating) return;
   const side = slot.dataset.side;
@@ -773,6 +859,7 @@ function onButton(k) {
   } else if (k === 'lock') { act({ t: 'lineup', ids: ui.pick.slice(), bench: ui.bpick.slice() }); ui.pick = []; ui.bpick = []; }
   else if (k === 'inside' || k === 'outside') { sfx.play('tap'); ui.kind = k; render(); }
   else if (k === 'cancel') { ui.kind = null; render(); }
+  else if (k === 'autodraft') { ui.autoDraft = !ui.autoDraft; render(); }
   else if (k === 'end') { ui.sel = null; ui.kind = null; act({ t: 'end' }); }
   else if (k === 'again') { closeModal(); ctl && ctl.rematch(); }
   else if (k === 'menu') { closeModal(); leaveGame(); }
@@ -888,6 +975,7 @@ async function banner(text, sub, mine) {
 }
 function toast(msg) {
   sfx.play('err');
+  ui.autoDraft = false;
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
@@ -907,7 +995,7 @@ function showOver() {
 function closeModal() { const m = $('#overModal'); if (m) m.remove(); }
 
 /* ---------- controllers ---------- */
-function resetUi() { ui.sel = null; ui.kind = null; ui.pick = []; ui.bpick = []; ui.peek = null; seenIds.me = new Set(); seenIds.opp = new Set(); seenIds.bench = new Set(); view = null; busy = Promise.resolve(); }
+function resetUi() { clearTimeout(ui.autoTimer); ui.autoTimer = null; ui.autoDraft = false; ui.packKey = null; lastOpp = {}; ui.sel = null; ui.kind = null; ui.pick = []; ui.bpick = []; ui.peek = null; seenIds.me = new Set(); seenIds.opp = new Set(); seenIds.bench = new Set(); view = null; busy = Promise.resolve(); }
 function showGame() { $('#menu').hidden = true; $('#game').hidden = false; scrollTo(0, 0); }
 function leaveGame() { if (ctl) ctl.close(); ctl = null; closeModal(); $('#game').hidden = true; $('#menu').hidden = false; resetUi(); }
 $('#quit').addEventListener('click', leaveGame);
@@ -936,7 +1024,7 @@ class LocalCtl {
         const a = E.botStep(this.s, 1);
         if (!a) break;
         await busy;
-        await wait(T(a.t === 'lineup' ? 500 : a.t === 'swap' ? 500 : 850));
+        await wait(T(a.t === 'open' || a.t === 'pick' ? 700 : a.t === 'lineup' || a.t === 'swap' ? 500 : 850));
         if (this.dead) break;
         const r = E.apply(this.s, 1, a);
         if (!r.ok) break;
@@ -1037,7 +1125,7 @@ $('#credits').addEventListener('click', () => {
 const hot = window.claude && window.claude.hot;
 if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (ctl && !ctl.online && ctl.s ? { s: ctl.s, hp: ctl.hp } : {}));
 const boot = d => {
-  if (d && d.s && d.s.ver === 4 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
+  if (d && d.s && d.s.ver === 5 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
 };
 if (hot && typeof hot.ready === 'function') hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
 })();

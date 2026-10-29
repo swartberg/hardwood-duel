@@ -5,28 +5,42 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // [name, position, tier, wikipediaTitle?]  tier 3 = MVP, 2 = All-Star, 1 = Starter.
+  // [name, position, tier, wikipediaTitle?]
+  // Tier = pack price: 5 Superstar, 4 All-Star, 3 Starter, 2 Role Player, 1 Bench Warmer.
   // The Wikipedia title (defaults to the name) is used to look up a freely licensed photo.
   const ROSTER = [
-    ['LeBron James', 'SF', 3], ['Stephen Curry', 'PG', 3], ['Kevin Durant', 'SF', 3], ['Giannis Antetokounmpo', 'PF', 3],
-    ['Nikola Jokić', 'C', 3], ['Luka Dončić', 'PG', 3], ['Joel Embiid', 'C', 3], ['Shai Gilgeous-Alexander', 'PG', 3],
-    ['Victor Wembanyama', 'C', 3], ['Michael Jordan', 'SG', 3], ['Kobe Bryant', 'SG', 3], ["Shaquille O'Neal", 'C', 3],
-    ['Tim Duncan', 'PF', 3], ['Magic Johnson', 'PG', 3], ['Hakeem Olajuwon', 'C', 3], ['Larry Bird', 'SF', 3],
-    ['Jayson Tatum', 'SF', 2], ['Anthony Davis', 'PF', 2], ['Damian Lillard', 'PG', 2], ['Kawhi Leonard', 'SF', 2],
-    ['Jimmy Butler', 'SF', 2], ['Devin Booker', 'SG', 2], ['Ja Morant', 'PG', 2], ['Zion Williamson', 'PF', 2],
-    ['Kyrie Irving', 'PG', 2], ['James Harden', 'SG', 2], ['Anthony Edwards', 'SG', 2, 'Anthony Edwards (basketball)'], ['Trae Young', 'PG', 2],
-    ['Donovan Mitchell', 'SG', 2], ['Jalen Brunson', 'PG', 2], ['Tyrese Haliburton', 'PG', 2], ['Paolo Banchero', 'PF', 2],
-    ['Dirk Nowitzki', 'PF', 2], ['Allen Iverson', 'SG', 2], ['Dwyane Wade', 'SG', 2], ['Kevin Garnett', 'PF', 2],
-    ['Arvydas Sabonis', 'C', 2], ['Domantas Sabonis', 'C', 2], ['Chris Paul', 'PG', 2], ['Russell Westbrook', 'PG', 2],
-    ['Steve Nash', 'PG', 2], ['Charles Barkley', 'PF', 2], ['Scottie Pippen', 'SF', 2], ['Vince Carter', 'SG', 2],
-    ['Tracy McGrady', 'SG', 2], ['Jaylen Brown', 'SG', 2], ['Bam Adebayo', 'C', 2], ['Cade Cunningham', 'PG', 2],
-    ['Klay Thompson', 'SG', 1], ['Draymond Green', 'PF', 1], ['Paul George', 'SF', 1], ['Karl-Anthony Towns', 'C', 1],
-    ['Rudy Gobert', 'C', 1], ["De'Aaron Fox", 'PG', 1], ['Jonas Valančiūnas', 'C', 1], ['Kristaps Porziņģis', 'C', 1],
-    ['Dennis Rodman', 'PF', 1], ['Ray Allen', 'SG', 1], ['Pau Gasol', 'C', 1], ['Tony Parker', 'PG', 1],
-    ['LaMelo Ball', 'PG', 1], ['Zach LaVine', 'SG', 1], ['Mikal Bridges', 'SF', 1], ['Jrue Holiday', 'PG', 1],
-    ['Alperen Şengün', 'C', 1], ['Evan Mobley', 'PF', 1], ['Franz Wagner', 'SF', 1], ['Scottie Barnes', 'PF', 1],
-    ['Chet Holmgren', 'C', 1], ['Brandon Ingram', 'SF', 1], ['Derrick Rose', 'PG', 1], ['Manu Ginóbili', 'SG', 1]
+    // Superstars
+    ['LeBron James', 'SF', 5], ['Stephen Curry', 'PG', 5], ['Kevin Durant', 'SF', 5], ['Luka Dončić', 'PG', 5],
+    ['Shai Gilgeous-Alexander', 'PG', 5], ['Jayson Tatum', 'SF', 5], ['Anthony Edwards', 'SG', 5, 'Anthony Edwards (basketball)'], ['Kawhi Leonard', 'SF', 5],
+    ['Michael Jordan', 'SG', 5], ['Kobe Bryant', 'SG', 5], ['Magic Johnson', 'PG', 5], ['Larry Bird', 'SF', 5],
+    ['Giannis Antetokounmpo', 'PF', 5], ['Nikola Jokić', 'C', 5], ['Joel Embiid', 'C', 5], ['Victor Wembanyama', 'C', 5],
+    ['Anthony Davis', 'PF', 5], ["Shaquille O'Neal", 'C', 5], ['Tim Duncan', 'PF', 5], ['Hakeem Olajuwon', 'C', 5], ['Dirk Nowitzki', 'PF', 5],
+    // All-Stars
+    ['Damian Lillard', 'PG', 4], ['Jimmy Butler', 'SF', 4], ['Devin Booker', 'SG', 4], ['Ja Morant', 'PG', 4],
+    ['Kyrie Irving', 'PG', 4], ['James Harden', 'SG', 4], ['Donovan Mitchell', 'SG', 4], ['Jalen Brunson', 'PG', 4],
+    ['Tyrese Haliburton', 'PG', 4], ['Jaylen Brown', 'SG', 4], ['Cade Cunningham', 'PG', 4], ['Allen Iverson', 'SG', 4], ['Dwyane Wade', 'SG', 4],
+    ['Zion Williamson', 'PF', 4], ['Paolo Banchero', 'PF', 4], ['Kevin Garnett', 'PF', 4], ['Bam Adebayo', 'C', 4],
+    ['Domantas Sabonis', 'C', 4], ['Karl-Anthony Towns', 'C', 4], ['Evan Mobley', 'PF', 4], ['Chet Holmgren', 'C', 4], ['Alperen Şengün', 'C', 4],
+    // Starters
+    ['Trae Young', 'PG', 3], ["De'Aaron Fox", 'PG', 3], ['LaMelo Ball', 'PG', 3], ['Jalen Williams', 'SF', 3],
+    ['Franz Wagner', 'SF', 3], ['Mikal Bridges', 'SF', 3], ['Paul George', 'SF', 3], ['Jrue Holiday', 'PG', 3],
+    ['Tyrese Maxey', 'PG', 3], ['Darius Garland', 'PG', 3], ['Desmond Bane', 'SG', 3], ['Brandon Ingram', 'SF', 3], ['Jamal Murray', 'PG', 3],
+    ['Scottie Barnes', 'PF', 3], ['Jaren Jackson Jr.', 'PF', 3], ['Rudy Gobert', 'C', 3], ['Kristaps Porziņģis', 'C', 3],
+    ['Lauri Markkanen', 'PF', 3], ['Jalen Johnson', 'PF', 3], ['Pascal Siakam', 'PF', 3], ['Ivica Zubac', 'C', 3], ['Jarrett Allen', 'C', 3],
+    // Role players
+    ['Klay Thompson', 'SG', 2], ['Derrick White', 'SG', 2, 'Derrick White (basketball)'], ['Herbert Jones', 'SF', 2, 'Herbert Jones (basketball)'], ['Josh Hart', 'SG', 2],
+    ['Austin Reaves', 'SG', 2], ['Bogdan Bogdanović', 'SG', 2], ['Alex Caruso', 'SG', 2], ['Mike Conley', 'PG', 2, 'Mike Conley Jr.'],
+    ['Norman Powell', 'SG', 2], ['Dillon Brooks', 'SF', 2], ['Andrew Nembhard', 'PG', 2], ['Aaron Nesmith', 'SF', 2], ['Kentavious Caldwell-Pope', 'SG', 2],
+    ['Draymond Green', 'PF', 2], ['Jonas Valančiūnas', 'C', 2], ['Brook Lopez', 'C', 2], ['Aaron Gordon', 'PF', 2],
+    ['Clint Capela', 'C', 2], ['Myles Turner', 'C', 2], ['Nic Claxton', 'C', 2], ['Jusuf Nurkić', 'C', 2], ['P. J. Washington', 'PF', 2],
+    // Bench warmers
+    ['Cory Joseph', 'PG', 1], ['Garrett Temple', 'SG', 1], ['Patty Mills', 'PG', 1], ['Ish Smith', 'PG', 1],
+    ['Tyus Jones', 'PG', 1], ['Delon Wright', 'PG', 1], ['Jordan McLaughlin', 'PG', 1], ['Javonte Green', 'SF', 1],
+    ['Lindy Waters III', 'SG', 1], ['Sam Merrill', 'SG', 1], ['Jared Butler', 'PG', 1], ['Kris Dunn', 'SG', 1], ['Damion Lee', 'SG', 1],
+    ['Jeff Green', 'PF', 1, 'Jeff Green (basketball)'], ['Thaddeus Young', 'PF', 1], ['Taj Gibson', 'PF', 1], ['Bismack Biyombo', 'C', 1],
+    ['Dwight Powell', 'C', 1], ['Mason Plumlee', 'C', 1], ['Boban Marjanović', 'C', 1], ['Drew Eubanks', 'C', 1], ['Kai Jones', 'C', 1]
   ];
+  const TIER_NAME = { 5: 'Superstar', 4: 'All-Star', 3: 'Starter', 2: 'Role Player', 1: 'Bench Warmer' };
 
   // Stat ranges per position: inside/outside scoring, inside/outside defense
   const ARCH = {
@@ -36,9 +50,10 @@
     PF: { ins: [70, 90], out: [56, 78], idef: [68, 88], odef: [56, 74] },
     C:  { ins: [74, 94], out: [50, 64], idef: [74, 95], odef: [50, 64] }
   };
-  const TIER_BONUS = { 1: 0, 2: 4, 3: 8 };
+  const TIER_BONUS = { 1: -12, 2: -6, 3: 0, 4: 4, 5: 8 };
 
   const FIELD = 5, DECK = 12;
+  const CREDITS = 15, PACK = 5; // pack draft: 15 credits, each pack shows 5 players of one tier and costs its tier
   // Court formation: slots 0-1 are frontcourt (PF, C), slots 2-4 are backcourt (PG, SG, SF).
   const FRONT = 2;
   const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
@@ -50,16 +65,20 @@
   const GROUP = { PF: 'FC', C: 'FC', PG: 'BC', SG: 'BC', SF: 'BC' };
   const slotGroup = i => (i < FRONT ? 'FC' : 'BC');
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-  const clampStat = v => Math.max(50, Math.min(100, v));
+  const clampStat = v => Math.max(35, Math.min(100, v));
   const uid = () => 'c' + Math.random().toString(36).slice(2, 10);
   const clampHp = h => { h = Math.round(Number(h)); return isFinite(h) ? Math.max(20, Math.min(999, h)) : 100; };
+
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   function makeCard(excludeNames, grp) {
     const ex = excludeNames || new Set();
     const inGrp = r => !grp || GROUP[r[1]] === grp;
     let pool = ROSTER.filter(r => inGrp(r) && !ex.has(r[0]));
     if (!pool.length) pool = ROSTER.filter(inGrp);
-    const [name, pos, tier] = pool[Math.floor(Math.random() * pool.length)];
+    return cardFrom(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  function cardFrom([name, pos, tier]) {
     const a = ARCH[pos], b = TIER_BONUS[tier];
     const roll = k => clampStat(ri(a[k][0], a[k][1]) + b + ri(-2, 2));
     const c = { id: uid(), name, pos, tier, grp: GROUP[pos], ins: roll('ins'), out: roll('out'), idef: roll('idef'), odef: roll('odef'), sta: STAMINA, revealed: false };
@@ -79,12 +98,49 @@
     opts = opts || {};
     const hp = clampHp(opts.hp == null ? 100 : opts.hp);
     const names = opts.names || ['Player 1', 'Player 2'];
-    const used = new Set(); // one player pool: no name appears in both decks
     return {
-      ver: 4, hpMax: hp,
-      players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: makeDeck(DECK, used), ready: false })),
-      phase: 'setup', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
+      ver: 5, hpMax: hp,
+      // draft phase: `bench` collects the drafted players; it becomes the 8-card deck for the lineup
+      players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: [], credits: CREDITS, pack: null, drafted: false, ready: false })),
+      phase: 'draft', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
     };
+  }
+
+  // ---------- Pack draft ----------
+  const TEAM = FIELD + BENCH; // 8 players: 3 frontcourt, 5 backcourt
+  const needs = pl => ({ FC: FRONT + BENCH_FC - pl.bench.filter(c => c.grp === 'FC').length, BC: TEAM - FRONT - BENCH_FC - pl.bench.filter(c => c.grp === 'BC').length });
+  const takenNames = s => new Set(s.players.flatMap(pl => [...pl.field, ...pl.bench]).filter(Boolean).map(c => c.name));
+  // Rows a player could pull from a tier: right court group, not owned by anyone.
+  function packPool(s, p, tier, skip) {
+    const need = needs(s.players[p]), taken = takenNames(s);
+    return ROSTER.filter(r => r[2] === tier && need[GROUP[r[1]]] > 0 && !taken.has(r[0]) && !(skip && skip.has(r[0])));
+  }
+  // Highest price a player can pay and still fill every remaining spot with 1-credit packs.
+  const maxPrice = pl => pl.credits - (TEAM - pl.bench.length - 1);
+  function canOpen(s, p, tier) {
+    const pl = s.players[p];
+    if (pl.drafted) return 'Your team is complete.';
+    if (pl.pack) return 'Pick a player from your open pack first.';
+    if (tier > pl.credits) return 'Not enough credits.';
+    if (tier > maxPrice(pl)) return 'You need to keep 1 credit for each open roster spot.';
+    if (!packPool(s, p, tier).length) return 'No players left in that pack for the spots you need.';
+    return '';
+  }
+  // Prefer names not showing in the opponent's open pack; fall back to them if the tier runs thin.
+  function makePack(s, p, tier) {
+    const op = s.players[1 - p], theirs = new Set(op.pack ? op.pack.cards.map(c => c.name) : []);
+    const rows = shuffle(packPool(s, p, tier, theirs)).concat(shuffle(packPool(s, p, tier).filter(r => theirs.has(r[0]))));
+    return rows.slice(0, PACK).map(cardFrom);
+  }
+  // After a pick, drop that name from the other player's open pack and top it back up if possible.
+  function fixPack(s, q, name) {
+    const pl = s.players[q];
+    if (!pl.pack || !pl.pack.cards.some(c => c.name === name)) return;
+    pl.pack.cards = pl.pack.cards.filter(c => c.name !== name);
+    const shown = new Set(pl.pack.cards.map(c => c.name));
+    const extra = shuffle(packPool(s, q, pl.pack.tier, shown))[0];
+    if (extra) pl.pack.cards.push(cardFrom(extra));
+    if (!pl.pack.cards.length) { pl.credits += pl.pack.tier; pl.pack = null; }
   }
 
   const copy = c => (c ? JSON.parse(JSON.stringify(c)) : null);
@@ -118,6 +174,36 @@
     const ev = [];
 
     if (s.phase === 'over') return { ok: false, error: 'The game is over.' };
+
+    if (a.t === 'open' || a.t === 'pick') {
+      if (s.phase !== 'draft') return { ok: false, error: 'The draft is over.' };
+      if (a.t === 'open') {
+        const tier = a.tier | 0;
+        if (!TIER_NAME[tier]) return { ok: false, error: 'Unknown pack.' };
+        const why = canOpen(s, p, tier);
+        if (why) return { ok: false, error: why };
+        me.credits -= tier;
+        me.pack = { tier, cards: makePack(s, p, tier) };
+        ev.push({ e: 'pack', p, tier });
+        log(s, p, 'info', `${me.name} opened a ${TIER_NAME[tier]} pack.`);
+        return { ok: true, events: ev };
+      }
+      if (!me.pack) return { ok: false, error: 'Open a pack first.' };
+      const c = me.pack.cards.find(x => x.id === a.id);
+      if (!c) return { ok: false, error: 'That player is not in your pack.' };
+      me.bench.push(c);
+      me.pack = null;
+      fixPack(s, 1 - p, c.name);
+      ev.push({ e: 'picked', p });
+      if (me.bench.length >= TEAM) { me.drafted = true; log(s, p, 'info', `${me.name} finished drafting.`); }
+      if (me.drafted && op.drafted) {
+        s.phase = 'setup';
+        ev.push({ e: 'drafted' });
+        log(s, p, 'info', 'Draft complete. Set your lineups.');
+      }
+      return { ok: true, events: ev };
+    }
+    if (s.phase === 'draft') return { ok: false, error: 'Finish the draft first.' };
 
     if (a.t === 'lineup') {
       if (s.phase !== 'setup') return { ok: false, error: 'Lineups are already set.' };
@@ -159,6 +245,7 @@
       if (inc.grp !== slotGroup(slot)) return { ok: false, error: slotGroup(slot) === 'FC' ? 'Frontcourt players can only be swapped with frontcourt players.' : 'Backcourt players can only be swapped with backcourt players.' };
       if (broken(inc)) return { ok: false, error: `${inc.name} is still recovering a 0 defense.` };
       const out = me.field[slot];
+      out.revealed = false; // where a player moves stays hidden from the opponent
       me.field[slot] = inc;
       me.bench[bi] = out;
       ev.push({ e: 'swap', p, slot, forced: isForced });
@@ -217,6 +304,8 @@
 
     if (a.t === 'end') {
       rest(me);
+      // Cards are only face up for the turn they attacked or defended in.
+      s.players.forEach(pl => [...pl.field, ...pl.bench].forEach(c => { if (c) c.revealed = false; }));
       if (!canAttack(me) && !canAttack(op)) {
         // Nobody on court can attack, so nobody can earn a sub: higher HP takes it, equal HP is a draw (winner -1).
         s.phase = 'over'; s.winner = me.hp > op.hp ? p : op.hp > me.hp ? 1 - p : -1;
@@ -235,17 +324,22 @@
 
   function viewFor(s, p) {
     const me = s.players[p], op = s.players[1 - p];
-    const masked = c => (c.revealed ? copy(c) : { id: c.id, hidden: true, sta: c.sta });
+    // Face-down cards get ids tied to their spot, so the opponent can't follow a player through subs.
+    const masked = (c, key) => (c.revealed ? copy(c) : { id: 'h' + key, hidden: true });
     const mine = s.phase === 'play' && s.turn === p;
     return {
       you: p, phase: s.phase, turn: s.turn, myTurn: s.turn === p, attacked: s.attacked,
       subOk: mine && !!s.subOk, mustSub: mine ? mustSub(me) : [],
       turnNo: s.turnNo, winner: s.winner, hpMax: s.hpMax,
-      me: { name: me.name, hp: me.hp, ready: me.ready, field: me.field.map(copy), bench: me.bench.map(copy) },
+      me: {
+        name: me.name, hp: me.hp, ready: me.ready, field: me.field.map(copy), bench: me.bench.map(copy),
+        credits: me.credits, drafted: me.drafted, pack: me.pack ? { tier: me.pack.tier, cards: me.pack.cards.map(copy) } : null,
+        packs: s.phase === 'draft' ? [5, 4, 3, 2, 1].map(t => ({ tier: t, why: canOpen(s, p, t) })) : [], needs: needs(me)
+      },
       opp: {
-        name: op.name, hp: op.hp, ready: op.ready,
-        field: op.field.map(c => (c ? masked(c) : null)),
-        bench: s.phase === 'setup' ? [] : op.bench.map(masked)
+        name: op.name, hp: op.hp, ready: op.ready, drafted: op.drafted, drafting: !!op.pack, count: op.bench.length,
+        field: op.field.map((c, i) => (c ? masked(c, 'f' + i) : null)),
+        bench: s.phase === 'play' || s.phase === 'over' ? op.bench.map((c, i) => masked(c, 'b' + i)) : []
       },
       log: s.log.slice(0, 50).map(l => ({ mine: l.p === p, kind: l.kind, text: l.text }))
     };
@@ -266,8 +360,22 @@
   // Best healthy bench replacement for a slot.
   const benchFor = (pl, slot) => pl.bench.filter(b => b.grp === slotGroup(slot) && !broken(b)).sort((a, b) => b.sta - a.sta || byValue(a, b))[0];
 
+  // Draft helper shared by the bot and the "Auto-draft" button; works on a player or on a player's view.
+  function draftStep(me) {
+    if (me.drafted) return null;
+    if (me.pack) return { t: 'pick', id: me.pack.cards.slice().sort(byValue)[0].id };
+    const open = (me.packs || []).filter(x => !x.why).map(x => x.tier);
+    if (!open.length) return null;
+    // usually the priciest pack the budget allows, sometimes one cheaper
+    const i = open.length > 1 && Math.random() < 0.3 ? 1 : 0;
+    return { t: 'open', tier: open[i] };
+  }
+
   function botStep(s, p) {
     const me = s.players[p], op = s.players[1 - p];
+    if (s.phase === 'draft') {
+      return draftStep(Object.assign({}, me, { packs: [5, 4, 3, 2, 1].map(t => ({ tier: t, why: canOpen(s, p, t) })) }));
+    }
     if (s.phase === 'setup') {
       if (me.ready) return null;
       return Object.assign({ t: 'lineup' }, autoLineup(me.bench));
@@ -304,5 +412,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, DEF_FLOOR };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, autoLineup, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, BENCH, BENCH_FC, STAMINA, DEF_FLOOR, CREDITS, PACK, TIER_NAME, TEAM, draftStep };
 });
