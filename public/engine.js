@@ -40,14 +40,15 @@
   const FIELD = 5, DECK = 12;
   // Court formation: slots 0-1 are frontcourt (PF, C), slots 2-4 are backcourt (PG, SG, SF).
   const FRONT = 2;
-  const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck, kept constant through replacements
+  const DECK_FC = 5; // 5 frontcourt + 7 backcourt cards per deck to pick a starting five from
+  const STAMINA = 5, FATIGUE = 0.9; // each attack burns a bar and leaves 90% of every rating
+  const STATS = ['ins', 'out', 'idef', 'odef'];
   const GROUP = { PF: 'FC', C: 'FC', PG: 'BC', SG: 'BC', SF: 'BC' };
   const slotGroup = i => (i < FRONT ? 'FC' : 'BC');
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const clampStat = v => Math.max(50, Math.min(100, v));
   const uid = () => 'c' + Math.random().toString(36).slice(2, 10);
   const clampHp = h => { h = Math.round(Number(h)); return isFinite(h) ? Math.max(20, Math.min(999, h)) : 100; };
-  function jersey(name) { let h = 7; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 100; }
 
   function makeCard(excludeNames, grp) {
     const ex = excludeNames || new Set();
@@ -57,14 +58,15 @@
     const [name, pos, tier] = pool[Math.floor(Math.random() * pool.length)];
     const a = ARCH[pos], b = TIER_BONUS[tier];
     const roll = k => clampStat(ri(a[k][0], a[k][1]) + b + ri(-2, 2));
-    const c = { id: uid(), name, pos, tier, grp: GROUP[pos], num: jersey(name), ins: roll('ins'), out: roll('out'), idef: roll('idef'), odef: roll('odef'), revealed: false };
-    c.ins0 = c.ins; c.out0 = c.out;
+    const c = { id: uid(), name, pos, tier, grp: GROUP[pos], ins: roll('ins'), out: roll('out'), idef: roll('idef'), odef: roll('odef'), sta: STAMINA, revealed: false };
+    c.ins0 = c.ins; c.out0 = c.out; c.idef0 = c.idef; c.odef0 = c.odef;
     return c;
   }
 
-  function makeDeck(n) {
-    n = n || DECK;
-    const names = new Set(), deck = [];
+  // Pass a shared name set to keep names unique across several decks.
+  function makeDeck(n, names) {
+    n = n || DECK; names = names || new Set();
+    const deck = [];
     for (let i = 0; i < n; i++) { const c = makeCard(names, i < DECK_FC ? 'FC' : 'BC'); names.add(c.name); deck.push(c); }
     return deck;
   }
@@ -73,16 +75,17 @@
     opts = opts || {};
     const hp = clampHp(opts.hp == null ? 100 : opts.hp);
     const names = opts.names || ['Player 1', 'Player 2'];
+    const used = new Set(); // one player pool: no name appears in both decks
     return {
-      hpMax: hp,
-      players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: makeDeck(DECK), ready: false })),
+      ver: 2, hpMax: hp,
+      players: [0, 1].map(i => ({ name: names[i], hp, field: Array(FIELD).fill(null), bench: makeDeck(DECK, used), ready: false })),
       phase: 'setup', turn: Math.random() < 0.5 ? 0 : 1, attacked: false, turnNo: 0, winner: null, log: []
     };
   }
 
   const copy = c => (c ? JSON.parse(JSON.stringify(c)) : null);
   function log(s, p, kind, text) { s.log.unshift({ p, kind, text }); if (s.log.length > 80) s.log.length = 80; }
-  const deckNames = pl => new Set([...pl.field, ...pl.bench].filter(Boolean).map(c => c.name));
+  const canAttack = pl => pl.field.some(c => c && c.sta > 0);
 
   function apply(s, p, a) {
     if (p !== 0 && p !== 1) return { ok: false, error: 'Unknown player.' };
@@ -101,8 +104,9 @@
       if (picked.some(c => !c)) return { ok: false, error: 'Those cards are not in your deck.' };
       const fc = picked.filter(c => c.grp === 'FC'), bc = picked.filter(c => c.grp === 'BC');
       if (fc.length !== FRONT || bc.length !== FIELD - FRONT) return { ok: false, error: 'Start 2 frontcourt and 3 backcourt players.' };
+      // The starting five plays the whole game; the rest of the deck sits out.
       me.field = [...fc, ...bc];
-      me.bench = me.bench.filter(c => !ids.includes(c.id));
+      me.bench = [];
       me.ready = true;
       ev.push({ e: 'ready', p });
       log(s, p, 'info', `${me.name} locked in a starting five.`);
@@ -117,19 +121,7 @@
     if (s.phase !== 'play') return { ok: false, error: 'Wait for both lineups.' };
     if (s.turn !== p) return { ok: false, error: "It's not your turn." };
 
-    if (a.t === 'swap') {
-      const slot = a.slot | 0;
-      if (slot < 0 || slot >= FIELD || !me.field[slot]) return { ok: false, error: 'Pick a starter to sub out.' };
-      const bi = me.bench.findIndex(c => c.id === a.benchId);
-      if (bi < 0) return { ok: false, error: 'That card is not on your bench.' };
-      if (me.bench[bi].grp !== slotGroup(slot)) return { ok: false, error: slotGroup(slot) === 'FC' ? 'Frontcourt players can only be swapped with frontcourt players.' : 'Backcourt players can only be swapped with backcourt players.' };
-      const out = me.field[slot];
-      me.field[slot] = me.bench[bi];
-      me.bench[bi] = out;
-      ev.push({ e: 'swap', p, slot });
-      log(s, p, 'sub', `${me.name} made a substitution.`);
-      return { ok: true, events: ev };
-    }
+    if (a.t === 'swap') return { ok: false, error: 'Lineups are locked for the whole game.' };
 
     if (a.t === 'attack') {
       if (s.attacked) return { ok: false, error: 'You already attacked this turn.' };
@@ -137,6 +129,7 @@
       const atk = me.field[slot], def = op.field[target];
       if (!atk) return { ok: false, error: 'Choose one of your starters to attack with.' };
       if (!def) return { ok: false, error: 'Choose an opponent card to attack.' };
+      if (atk.sta <= 0) return { ok: false, error: `${atk.name} is out of stamina.` };
       atk.revealed = true; def.revealed = true;
       const sk = kind === 'inside' ? 'ins' : 'out', dk = kind === 'inside' ? 'idef' : 'odef';
       const av = atk[sk], dv = def[dk];
@@ -144,33 +137,37 @@
       s.attacked = true;
       const label = kind === 'inside' ? 'inside' : 'outside';
       if (av > dv) {
-        const dmg = av - dv;
+        // The difference hits HP and comes off the defender's rating for that shot type.
+        // A defender already at 0 is wide open: the full attack goes to HP.
+        const dmg = av - dv, open = dv === 0;
         op.hp = Math.max(0, op.hp - dmg);
-        // Beaten card leaves the game; owner draws from deck into the slot and gets a fresh random card.
-        // Replacement comes from the same court group so the 2-3 formation holds.
-        const g = slotGroup(target);
-        op.field[target] = null;
-        const pool = op.bench.map((c, i) => (c.grp === g ? i : -1)).filter(i => i >= 0);
-        const di = pool.length ? pool[Math.floor(Math.random() * pool.length)] : -1;
-        const drawn = di >= 0 ? op.bench.splice(di, 1)[0] : makeCard(deckNames(op), g);
-        op.field[target] = drawn;
-        op.bench.push(makeCard(deckNames(op), g));
-        Object.assign(evA, { result: 'score', dmg, hpAfter: op.hp, drawnId: drawn.id });
-        log(s, p, 'score', `${atk.name} scored ${label} on ${def.name} (${av} vs ${dv}). ${dmg} damage. ${def.name} is out.`);
+        def[dk] = Math.max(0, dv - dmg);
+        Object.assign(evA, { result: 'score', dmg, open, hpAfter: op.hp, defAfter: def[dk] });
+        log(s, p, 'score', open
+          ? `${atk.name} found ${def.name} wide open ${label}. ${dmg} straight to ${op.name}'s HP.`
+          : `${atk.name} scored ${label} on ${def.name} (${av} vs ${dv}). ${dmg} damage. ${def.name}'s ${label} defense drops to ${def[dk]}.`);
       } else if (av < dv) {
         const diff = dv - av;
         atk[sk] = Math.max(0, atk[sk] - diff);
-        Object.assign(evA, { result: 'blocked', diff, statAfter: atk[sk] });
+        Object.assign(evA, { result: 'blocked', diff });
         log(s, p, 'block', `${def.name} shut down ${atk.name}'s ${label} attack (${av} vs ${dv}). ${atk.name} loses ${diff} ${label} scoring.`);
       } else {
         Object.assign(evA, { result: 'tie' });
         log(s, p, 'tie', `${atk.name} and ${def.name} cancel out at ${av}.`);
       }
+      atk.sta -= 1;
+      STATS.forEach(k => { atk[k] = Math.round(atk[k] * FATIGUE); });
+      Object.assign(evA, { sta: atk.sta, statAfter: atk[sk] });
       ev.push(evA);
       if (op.hp <= 0) {
         s.phase = 'over'; s.winner = p;
         ev.push({ e: 'over', winner: p });
         log(s, p, 'info', `${me.name} wins.`);
+      } else if (!canAttack(me) && !canAttack(op)) {
+        // Both benches are gassed: higher HP takes it, equal HP is a draw (winner -1).
+        s.phase = 'over'; s.winner = me.hp > op.hp ? p : op.hp > me.hp ? 1 - p : -1;
+        ev.push({ e: 'over', winner: s.winner });
+        log(s, p, 'info', s.winner < 0 ? 'Both teams are out of stamina. It ends in a draw.' : `Both teams are out of stamina. ${s.players[s.winner].name} wins on HP.`);
       }
       return { ok: true, events: ev };
     }
@@ -191,8 +188,8 @@
       turnNo: s.turnNo, winner: s.winner, hpMax: s.hpMax,
       me: { name: me.name, hp: me.hp, ready: me.ready, field: me.field.map(copy), bench: me.bench.map(copy) },
       opp: {
-        name: op.name, hp: op.hp, ready: op.ready, benchCount: op.bench.length,
-        field: op.field.map(c => (c ? (c.revealed ? copy(c) : { id: c.id, hidden: true }) : null))
+        name: op.name, hp: op.hp, ready: op.ready,
+        field: op.field.map(c => (c ? (c.revealed ? copy(c) : { id: c.id, hidden: true, sta: c.sta }) : null))
       },
       log: s.log.slice(0, 50).map(l => ({ mine: l.p === p, kind: l.kind, text: l.text }))
     };
@@ -214,15 +211,9 @@
     }
     if (s.phase !== 'play' || s.turn !== p) return null;
     if (!s.attacked) {
-      const desired = new Set(bestFive([...me.field, ...me.bench]).map(c => c.id));
-      const slot = me.field.findIndex(c => c && !desired.has(c.id));
-      if (slot >= 0) {
-        const inc = me.bench.filter(c => desired.has(c.id) && c.grp === slotGroup(slot)).sort(byValue)[0];
-        if (inc) return { t: 'swap', slot, benchId: inc.id };
-      }
       let best = null;
       me.field.forEach((a, i) => {
-        if (!a) return;
+        if (!a || a.sta <= 0) return;
         op.field.forEach((t, j) => {
           if (!t) return;
           ['inside', 'outside'].forEach(k => {
@@ -241,5 +232,5 @@
     return { t: 'end' };
   }
 
-  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK };
+  return { ROSTER, GROUP, createGame, apply, viewFor, botStep, bestFive, slotGroup, makeCard, makeDeck, clampHp, FIELD, FRONT, DECK, STAMINA };
 });
