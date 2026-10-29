@@ -1,0 +1,15 @@
+{
+  "name": "hardwood-duel",
+  "version": "0.1.0",
+  "description": "Hardwood Duel: a Yu-Gi-Oh style basketball card battler, vs bot or online",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

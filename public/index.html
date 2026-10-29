@@ -1,0 +1,842 @@
+<title>Hardwood Duel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen arena — opponent HP + five face-down slots, glowing midcourt command strip, your five, bench rail; game log rail on wide screens */
+:root{
+  --bg:#04060b; --bg2:#0a101a; --panel:#0b121d; --line:#1a2537; --line2:#2a3a54;
+  --fg:#e8eef7; --muted:#8190a8; --dim:#46536a;
+  --me:#ff7a22; --opp:#33c4ff; --atk:#ffb649; --def:#a896ff;
+  --gold:#ffcf5c; --silver:#b8cde6; --steel:#66788f;
+  --bad:#ff4a5f; --good:#38e8a0;
+  --f-display:"Saira Condensed","Arial Narrow",Impact,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cw-base:clamp(58px, min(calc((100vw - 60px) / 3.7), calc((100vh - 290px) / 6.9)), 116px);
+  --cw:var(--cw-base);
+  --gap:clamp(5px, 1.4vw, 12px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{overflow-x:clip}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 520px at 50% 50%, rgba(255,122,34,.07), transparent 60%),
+    radial-gradient(900px 400px at 50% 0%, rgba(51,196,255,.08), transparent 70%),
+    var(--bg);
+  color:var(--fg); font-family:var(--f-body); font-size:15px; line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit}
+.btn{
+  font-family:var(--f-display); font-weight:700; letter-spacing:.06em; text-transform:uppercase; font-size:15px;
+  padding:9px 16px; border-radius:10px; border:1px solid var(--line2); background:rgba(255,255,255,.02);
+  cursor:pointer; transition:border-color .2s, box-shadow .2s, background .2s, transform .12s, opacity .2s; white-space:nowrap;
+}
+.btn:hover{border-color:var(--muted)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.card:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid var(--opp);outline-offset:2px}
+.btn.primary{border-color:var(--me);color:#fff;background:linear-gradient(180deg,rgba(255,122,34,.28),rgba(255,122,34,.1));box-shadow:0 0 18px -4px var(--me), inset 0 0 12px -6px var(--me)}
+.btn.primary:hover{box-shadow:0 0 26px -2px var(--me), inset 0 0 14px -6px var(--me)}
+.btn.atk{border-color:var(--atk);color:var(--atk);box-shadow:0 0 14px -6px var(--atk)}
+.btn.atk b{color:#fff;margin-left:6px;font-variant-numeric:tabular-nums}
+.btn.ghost{border-color:var(--line2);color:var(--muted)}
+.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.panel{background:linear-gradient(180deg,rgba(14,22,35,.92),rgba(8,13,21,.92));border:1px solid var(--line);border-radius:14px;box-shadow:0 0 0 1px rgba(255,255,255,.015) inset, 0 10px 40px -20px #000}
+.eyebrow{font-family:var(--f-display);font-weight:600;letter-spacing:.18em;text-transform:uppercase;font-size:12px;color:var(--muted)}
+
+/* ---------- Menu ---------- */
+#menu{max-width:1040px;margin:0 auto;padding-block:clamp(20px,5vh,56px) 40px;display:grid;grid-template-columns:1.05fr 1fr;gap:clamp(20px,4vw,48px);align-items:center}
+.hero h1{font-family:var(--f-display);font-weight:800;font-size:clamp(52px,9vw,104px);line-height:.86;margin:10px 0 14px;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
+.hero h1 span{display:block;color:transparent;-webkit-text-stroke:1.5px var(--me);filter:drop-shadow(0 0 12px rgba(255,122,34,.55))}
+.hero p{color:var(--muted);max-width:44ch;margin:0}
+.fan{position:relative;height:calc(var(--fan-w) * 1.42 + 30px);--fan-w:clamp(96px,14vw,138px);margin-top:28px}
+.fan .card{position:absolute;left:50%;top:10px;--cw:var(--fan-w);cursor:default}
+.fan .card:nth-child(1){transform:translateX(-140%) rotate(-11deg) translateY(16px)}
+.fan .card:nth-child(2){transform:translateX(-50%);z-index:2}
+.fan .card:nth-child(3){transform:translateX(40%) rotate(11deg) translateY(16px)}
+.fan .card{animation:floaty 6s ease-in-out infinite}
+.fan .card:nth-child(2){animation-delay:-2s}.fan .card:nth-child(3){animation-delay:-4s}
+@keyframes floaty{50%{translate:0 -6px}}
+.modes{display:grid;gap:14px;min-width:0}
+.mode{padding:18px;display:grid;gap:12px}
+.mode h2{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase;margin:0;display:flex;align-items:center;gap:10px}
+.mode h2 i{width:9px;height:9px;border-radius:50%;background:var(--me);box-shadow:0 0 10px var(--me)}
+.mode.online h2 i{background:var(--opp);box-shadow:0 0 10px var(--opp)}
+.mode.bot{border-color:rgba(255,122,34,.35);box-shadow:0 0 30px -18px var(--me)}
+.mode.online{border-color:rgba(51,196,255,.3);box-shadow:0 0 30px -18px var(--opp)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.05em;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:transparent;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{border-color:var(--me);color:#fff;box-shadow:0 0 12px -3px var(--me)}
+label.lbl{font-size:13px;color:var(--muted);display:grid;gap:5px;flex:1;min-width:140px}
+input.inp{background:#060a11;border:1px solid var(--line2);border-radius:9px;padding:9px 11px;color:var(--fg);font:inherit;width:100%;min-width:0}
+input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:18px;max-width:130px}
+.status{font-size:13px;color:var(--muted);min-height:1.2em}
+.status.err{color:var(--bad)}
+.status b.code{font-family:var(--f-display);font-size:26px;letter-spacing:.25em;color:var(--opp);text-shadow:0 0 12px rgba(51,196,255,.6);display:inline-block;margin:0 6px;user-select:all}
+.rules{padding:16px 18px}
+.rules ol{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:14px;display:grid;gap:4px}
+.rules b{color:var(--fg);font-weight:600}
+
+/* ---------- Game ---------- */
+#game{max-width:1100px;margin:0 auto;padding-block:12px 24px;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px;align-items:start}
+.arena{display:grid;gap:10px;min-width:0;position:relative}
+.arena>*{min-width:0}
+.side-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:10px 14px}
+.side-head .who{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px;min-width:0}
+.side-head .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:28vw}
+.side-head .who i{width:8px;height:8px;border-radius:50%;flex:none}
+.side-head.opp .who i{background:var(--opp);box-shadow:0 0 8px var(--opp)}
+.side-head.me .who i{background:var(--me);box-shadow:0 0 8px var(--me)}
+.hp{position:relative;height:12px;border-radius:999px;background:#05080e;border:1px solid var(--line2);overflow:hidden}
+.hp .trail,.hp .fill{position:absolute;inset:0 auto 0 0;border-radius:inherit}
+.hp .trail{background:rgba(255,255,255,.55);transition:width .9s .35s cubic-bezier(.3,.7,.2,1)}
+.hp .fill{transition:width .45s cubic-bezier(.3,.7,.2,1)}
+.opp .hp .fill{background:linear-gradient(90deg,#1478c4,var(--opp));box-shadow:0 0 12px var(--opp)}
+.me .hp .fill{background:linear-gradient(90deg,#c2410c,var(--me));box-shadow:0 0 12px var(--me)}
+.hp.low .fill{animation:lowhp 1s ease-in-out infinite}
+@keyframes lowhp{50%{filter:brightness(1.7)}}
+.hpnum{font-family:var(--f-display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.hpnum small{color:var(--muted);font-size:13px;font-weight:600}
+.deckpile{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-family:var(--f-display);letter-spacing:.1em;text-transform:uppercase}
+.deckpile .mini{width:14px;height:20px;border-radius:3px;border:1px solid var(--opp);box-shadow:0 0 8px -2px var(--opp), 3px -3px 0 -1px #04060b, 3px -3px 0 0 var(--opp)}
+
+.field{display:grid;gap:6px;padding:8px 4px;position:relative}
+.zone{position:relative;display:flex;justify-content:center}
+.zone + .zone{border-top:1px dashed var(--line);padding-top:6px}
+.zrow{display:flex;justify-content:center;gap:var(--gap)}
+.zl{position:absolute;left:2px;top:50%;translate:0 -50%;writing-mode:vertical-rl;rotate:180deg;font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+.field.me .zl{color:color-mix(in srgb, var(--me) 55%, var(--dim))}
+.field.opp .zl{color:color-mix(in srgb, var(--opp) 55%, var(--dim))}
+.slot{width:var(--cw);height:calc(var(--cw)*1.42);border-radius:9px;position:relative;flex:none}
+.slot.empty{border:1px dashed var(--line2);background:rgba(255,255,255,.012)}
+.slot.empty::after{content:attr(data-n);position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);color:var(--dim);font-size:13px;letter-spacing:.12em}
+
+.mid{position:relative;padding:12px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;overflow:hidden}
+.mid::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,var(--line2) 20%,var(--line2) 80%,transparent);pointer-events:none}
+.mid::after{content:"";position:absolute;left:50%;top:50%;width:120px;height:120px;border:1px solid var(--line);border-radius:50%;translate:-50% -50%;pointer-events:none}
+.mid>*{position:relative;z-index:1}
+.turnpill{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2);white-space:nowrap}
+.turnpill.mine{border-color:var(--me);color:var(--me);box-shadow:0 0 14px -3px var(--me)}
+.turnpill.theirs{border-color:var(--opp);color:var(--opp);box-shadow:0 0 14px -3px var(--opp)}
+.hint{font-size:14px;color:var(--muted);min-width:0;background:var(--panel);padding:2px 6px;border-radius:6px;justify-self:start}
+.hint b{color:var(--fg);font-weight:600}
+.hint .stat{font-family:var(--f-display);font-weight:700;font-variant-numeric:tabular-nums}
+.hint .a{color:var(--atk)}.hint .d{color:var(--def)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+.benchwrap{padding:10px 12px 12px}
+.benchhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.bench{display:flex;gap:calc(var(--gap) * 2.2);overflow-x:auto;padding:8px 4px 6px;--cw:calc(var(--cw-base) * .86);scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.bgroup{display:grid;gap:6px;flex:none}
+.bgroup + .bgroup{border-left:1px dashed var(--line2);padding-left:calc(var(--gap) * 2.2)}
+.bl{font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.bl b{color:var(--fg);font-weight:700}
+.bcards{display:flex;gap:var(--gap)}
+.card.ok .front{border-color:var(--good);box-shadow:0 0 0 1px var(--good),0 0 16px -4px var(--good)}
+.bench .slot{width:var(--cw);height:calc(var(--cw)*1.42)}
+
+/* ---------- Card ---------- */
+.card{width:var(--cw);height:calc(var(--cw)*1.42);perspective:900px;container-type:inline-size;position:relative;cursor:pointer;transition:transform .25s cubic-bezier(.3,.7,.2,1), filter .25s;border-radius:9px;outline:none}
+.card .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.3,.7,.2,1)}
+.card.is-hidden .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:9px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.card{--frame:var(--steel)}
+.card.t3{--frame:var(--gold)}.card.t2{--frame:var(--silver)}
+.front{
+  background:linear-gradient(165deg,#172133 0%,#0b111c 55%,#080c14 100%);
+  border:1px solid color-mix(in srgb, var(--frame) 75%, transparent);
+  box-shadow:0 0 16px -6px var(--frame), inset 0 0 0 1px rgba(255,255,255,.03);
+  display:flex;flex-direction:column;padding:5cqw;gap:3cqw
+}
+.card.t3 .front{background:linear-gradient(165deg,#2a2412 0%,#121018 50%,#080c14 100%)}
+.f-top{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-display);font-weight:700;line-height:1}
+.pos i{font-style:normal;opacity:.6;margin-left:.35em}
+.pos{font-size:max(8px,10cqw);letter-spacing:.06em;padding:1.5cqw 3.5cqw;border:1px solid color-mix(in srgb, var(--frame) 60%, transparent);border-radius:3cqw;color:var(--frame)}
+.tier{font-size:max(7px,9cqw);color:var(--frame);letter-spacing:.05em}
+.art{flex:1;min-height:0;border-radius:4cqw;position:relative;overflow:hidden;display:grid;place-items:center;
+  background:
+    radial-gradient(circle at 50% 135%, transparent 58%, color-mix(in srgb, var(--frame) 30%, transparent) 59%, transparent 61%),
+    radial-gradient(circle at 50% 135%, transparent 30%, color-mix(in srgb, var(--frame) 18%, transparent) 31%, transparent 33%),
+    linear-gradient(180deg, color-mix(in srgb, var(--frame) 12%, transparent), transparent);
+  border:1px solid rgba(255,255,255,.05)}
+.art .num{font-family:var(--f-display);font-weight:800;font-size:46cqw;line-height:1;color:transparent;-webkit-text-stroke:1px color-mix(in srgb, var(--frame) 70%, transparent);opacity:.8}
+.nm{font-family:var(--f-display);font-weight:700;text-transform:uppercase;font-size:max(8px,10.5cqw);line-height:1.02;letter-spacing:.02em;min-height:2.04em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
+.st{display:grid;grid-template-columns:auto 1fr 1fr;gap:.5cqw 3cqw;align-items:center;font-family:var(--f-display);line-height:1}
+.st .hd{font-size:max(6px,7.5cqw);color:var(--muted);text-align:center;letter-spacing:.1em;font-weight:600}
+.st .lb{font-size:max(6px,7.5cqw);letter-spacing:.08em;font-weight:700}
+.st .lb.atk{color:var(--atk)}.st .lb.def{color:var(--def)}
+.st .v{font-size:max(10px,15cqw);font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.st .v.atk{color:#ffe3b3}.st .v.def{color:#ddd5ff}
+.st .v.hurt{color:var(--bad)}
+.seen{position:absolute;top:-1px;right:-1px;font-family:var(--f-display);font-weight:700;font-size:max(6px,7cqw);letter-spacing:.1em;padding:1cqw 3cqw;border-radius:0 9px 0 4cqw;background:rgba(51,196,255,.18);color:var(--opp)}
+.back{transform:rotateY(180deg);background:radial-gradient(circle at 50% 50%, #0e1b2b, #060a12 75%);border:1px solid color-mix(in srgb, var(--opp) 55%, transparent);box-shadow:0 0 18px -6px var(--opp), inset 0 0 22px -10px var(--opp);color:var(--opp);display:grid;place-items:center}
+.back svg{width:72%;height:auto;filter:drop-shadow(0 0 4px currentColor)}
+.back::after{content:"";position:absolute;inset:6cqw;border:1px solid color-mix(in srgb, var(--opp) 25%, transparent);border-radius:5cqw}
+
+/* states */
+.field.me .card:hover,.bench .card:hover{transform:translateY(-4px)}
+.card.sel{transform:translateY(-8px)!important}
+.card.sel .front{border-color:var(--me);box-shadow:0 0 0 1px var(--me), 0 0 26px -2px var(--me)}
+.card.picked .front{border-color:var(--me);box-shadow:0 0 0 1px var(--me), 0 0 20px -4px var(--me)}
+.card.picked::after{content:attr(data-order);position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-radius:50%;background:var(--me);color:#140700;font-family:var(--f-display);font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 0 12px var(--me);z-index:3}
+.card.target{animation:targetpulse 1.1s ease-in-out infinite}
+.card.target .back,.card.target .front{box-shadow:0 0 0 1px var(--opp),0 0 24px 0 var(--opp)}
+.card.target:hover{transform:translateY(4px) scale(1.04)}
+@keyframes targetpulse{50%{filter:brightness(1.35)}}
+.card.peek .front,.card.peek .back{box-shadow:0 0 0 1px #fff,0 0 18px -2px #fff}
+.card.dim{filter:saturate(.4) brightness(.6)}
+.card.attacking{z-index:30}
+.card.enter{animation:enter .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{opacity:0;transform:translateY(-26px) scale(.85)}}
+.card.beaten{animation:beaten .6s ease-in forwards;pointer-events:none}
+@keyframes beaten{30%{transform:scale(1.08);filter:brightness(2.2)}100%{transform:scale(.6) rotate(-8deg);opacity:0;filter:blur(6px) brightness(2)}}
+.card.shake{animation:shake .4s}
+@keyframes shake{20%{translate:-5px 0}40%{translate:5px 0}60%{translate:-3px 0}80%{translate:3px 0}}
+.impact{position:absolute;width:calc(var(--cw)*1.6);aspect-ratio:1;max-width:100%;border-radius:50%;pointer-events:none;z-index:40;border:2px solid #fff;animation:ring .5s ease-out forwards;translate:-50% -50%}
+@keyframes ring{from{transform:scale(.2);opacity:1}to{transform:scale(1.3);opacity:0}}
+.floater{position:fixed;z-index:60;pointer-events:none;font-family:var(--f-display);font-weight:800;font-size:clamp(26px,5vw,42px);letter-spacing:.02em;translate:-50% -50%;animation:floatup 1.3s ease-out forwards;text-shadow:0 0 14px currentColor;white-space:nowrap}
+.floater.bad{color:var(--bad)}.floater.good{color:var(--good)}.floater.neutral{color:var(--fg)}
+@keyframes floatup{0%{opacity:0;transform:translateY(10px) scale(.7)}15%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-46px) scale(1)}}
+
+.callout{position:absolute;left:50%;top:50%;translate:-50% -50%;z-index:50;pointer-events:none;padding:12px 22px;text-align:center;border-radius:14px;background:rgba(4,6,11,.88);border:1px solid var(--atk);box-shadow:0 0 34px -6px var(--atk);animation:callin .3s cubic-bezier(.2,.8,.2,1)}
+.callout .k{display:block;font-family:var(--f-display);font-weight:700;letter-spacing:.24em;font-size:12px;color:var(--atk);text-transform:uppercase}
+.callout .nums{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,6vw,46px);line-height:1.05;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;justify-content:center;gap:12px}
+.callout .nums i{font-style:normal;font-size:.45em;color:var(--muted);letter-spacing:.15em}
+.callout .na{color:#ffe3b3}.callout .nd{color:#ddd5ff}
+.callout .res{display:block;font-family:var(--f-display);font-weight:700;letter-spacing:.12em;font-size:15px;text-transform:uppercase;margin-top:2px;min-height:1.2em}
+.callout .res.good{color:var(--good)}.callout .res.bad{color:var(--bad)}
+@keyframes callin{from{opacity:0;transform:scale(.8)}}
+
+.banner{position:fixed;left:0;right:0;top:42%;z-index:70;pointer-events:none;text-align:center;font-family:var(--f-display);font-weight:800;font-size:clamp(40px,9vw,88px);text-transform:uppercase;letter-spacing:.04em;line-height:1;animation:sweep 1.25s cubic-bezier(.2,.8,.2,1) forwards}
+.banner.mine{color:transparent;-webkit-text-stroke:1.5px var(--me);filter:drop-shadow(0 0 16px rgba(255,122,34,.8))}
+.banner.theirs{color:transparent;-webkit-text-stroke:1.5px var(--opp);filter:drop-shadow(0 0 16px rgba(51,196,255,.8))}
+.banner small{display:block;font-size:.24em;letter-spacing:.3em;color:var(--fg);-webkit-text-stroke:0;margin-top:8px}
+@keyframes sweep{0%{opacity:0;transform:translateX(-12%) skewX(-12deg)}20%{opacity:1;transform:translateX(0) skewX(-6deg)}75%{opacity:1;transform:translateX(2%) skewX(-6deg)}100%{opacity:0;transform:translateX(12%) skewX(-12deg)}}
+
+.log{padding:14px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;gap:10px;min-width:0}
+.log ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;overflow:auto;font-size:13px;color:var(--muted)}
+.log li{padding-left:12px;position:relative;line-height:1.35}
+.log li::before{content:"";position:absolute;left:0;top:.45em;width:6px;height:6px;border-radius:50%;background:var(--opp)}
+.log li.mine::before{background:var(--me)}
+.log li.score{color:var(--fg)}
+.log li:first-child{animation:enter .4s}
+.log .empty{color:var(--dim)}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+
+.modal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,4,8,.72);backdrop-filter:blur(6px);padding-inline:16px}
+.modal .box{padding:28px;text-align:center;display:grid;gap:14px;max-width:420px;width:100%;animation:callin .35s}
+.modal h3{font-family:var(--f-display);font-weight:800;font-size:64px;margin:0;line-height:.9;text-transform:uppercase;color:transparent}
+.modal h3.win{-webkit-text-stroke:1.5px var(--me);filter:drop-shadow(0 0 14px var(--me))}
+.modal h3.lose{-webkit-text-stroke:1.5px var(--opp);filter:drop-shadow(0 0 14px var(--opp))}
+.modal p{margin:0;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));translate:-50% 0;z-index:95;padding:10px 16px;border-radius:10px;background:#120a0d;border:1px solid var(--bad);color:#ffd6dc;box-shadow:0 0 22px -6px var(--bad);font-size:14px;animation:callin .25s;max-width:calc(100vw - 32px)}
+
+@media (max-width:860px){
+  #game{grid-template-columns:minmax(0,1fr)}
+  .log{position:static;max-height:240px}
+  #menu{grid-template-columns:minmax(0,1fr)}
+  .fan{margin-top:16px}
+}
+@media (max-width:560px){
+  .mid{grid-template-columns:minmax(0,1fr);justify-items:stretch}
+  .mid::after{display:none}
+  .actions{justify-content:stretch}
+  .actions .btn{flex:1;padding-inline:8px;font-size:14px}
+  .side-head{padding:8px 10px;gap:8px}
+  .side-head .who{font-size:15px}
+  .hpnum{font-size:17px;min-width:60px}
+  .field{padding:8px 0}
+  .deckpile .lbl{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+
+<main id="menu">
+  <section class="hero">
+    <div class="eyebrow">Street-legal card battler · 5 v 5</div>
+    <h1>Hardwood<span>Duel</span></h1>
+    <p>Build a starting five from a random twelve-card deck, keep your lineup face down, and attack inside or outside. Beat a defender and the difference comes off their HP. Lose the matchup and your scorer pays for it.</p>
+    <div class="fan" id="fan"></div>
+  </section>
+  <section class="modes">
+    <div class="panel mode bot">
+      <h2><i></i>Play vs Bot</h2>
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">Starting HP</div>
+        <div class="row" id="hpChips">
+          <button class="chip" data-hp="100" aria-pressed="true">100</button>
+          <button class="chip" data-hp="150" aria-pressed="false">150</button>
+          <button class="chip" data-hp="200" aria-pressed="false">200</button>
+          <input class="inp" id="hpCustom" type="number" min="20" max="999" placeholder="Custom" style="width:96px" aria-label="Custom starting HP">
+        </div>
+      </div>
+      <div class="row"><button class="btn primary" id="startBot">Tip off</button></div>
+    </div>
+    <div class="panel mode online">
+      <h2><i></i>Play Online</h2>
+      <div class="row">
+        <label class="lbl" for="pname">Your name<input class="inp" id="pname" maxlength="18" placeholder="Player"></label>
+        <label class="lbl" for="server">Game server<input class="inp" id="server" placeholder="ws://localhost:8080"></label>
+      </div>
+      <div class="row">
+        <button class="btn" id="createRoom">Create room</button>
+        <span style="color:var(--dim)">or</span>
+        <input class="inp code" id="joinCode" maxlength="4" placeholder="CODE" aria-label="Room code">
+        <button class="btn" id="joinRoom">Join</button>
+      </div>
+      <div class="status" id="netStatus">Create a room uses the starting HP selected above.</div>
+    </div>
+    <div class="panel rules">
+      <div class="eyebrow">How a turn works</div>
+      <ol>
+        <li><b>Set your five.</b> 2 frontcourt (PF, C) and 3 backcourt (PG, SG, SF) from your 12 cards. Your opponent sees only card backs.</li>
+        <li><b>Sub freely.</b> On your turn, swap starters with bench cards as often as you like, frontcourt for frontcourt and backcourt for backcourt.</li>
+        <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip.</li>
+        <li><b>Score:</b> attack beats defense, the difference hits their HP and the defender is out. A fresh card comes off their deck.</li>
+        <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<main id="game" hidden>
+  <div class="arena" id="arena">
+    <div class="panel side-head opp">
+      <div class="who"><i></i><span id="oppName">Bot</span></div>
+      <div class="hp" id="oppHp"><div class="trail"></div><div class="fill"></div></div>
+      <div class="row" style="gap:12px;flex-wrap:nowrap">
+        <div class="deckpile" title="Cards left in opponent's deck"><div class="mini"></div><span id="oppDeck">7</span><span class="lbl">deck</span></div>
+        <div class="hpnum" id="oppHpNum">100</div>
+      </div>
+    </div>
+    <div class="field opp" id="oppField"></div>
+    <div class="panel mid" id="mid">
+      <div class="turnpill" id="turnPill">Setup</div>
+      <div class="hint" id="hint"></div>
+      <div class="actions" id="actions"></div>
+    </div>
+    <div class="field me" id="myField"></div>
+    <div class="panel side-head me">
+      <div class="who"><i></i><span id="myName">You</span></div>
+      <div class="hp" id="myHp"><div class="trail"></div><div class="fill"></div></div>
+      <div class="hpnum" id="myHpNum">100</div>
+    </div>
+    <div class="panel benchwrap">
+      <div class="benchhead"><span class="eyebrow" id="benchTitle">Your deck</span><span class="eyebrow" id="benchSub" style="letter-spacing:.08em;text-transform:none"></span></div>
+      <div class="bench" id="bench"></div>
+    </div>
+  </div>
+  <aside class="panel log">
+    <div class="toprow"><span class="eyebrow">Play-by-play</span><button class="btn ghost" id="quit" style="padding:5px 10px;font-size:12px">Leave game</button></div>
+    <ul id="log"></ul>
+  </aside>
+</main>
+
+<div id="fx"></div>
+
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+const E = window.HDEngine;
+const $ = s => document.querySelector(s);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const T = ms => reduced ? 1 : ms;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+/* ---------- card markup ---------- */
+const BACK = '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="50" cy="50" r="38"/><path d="M12 50h76M50 12v76"/><path d="M24 22c14 14 14 42 0 56M76 22c-14 14-14 42 0 56"/></svg>';
+function frontHTML(c, side) {
+  const hurt = (v, v0) => v < v0 ? ' hurt' : '';
+  return `<div class="f-top"><span class="pos">${c.pos}<i>${c.grp}</i></span><span class="tier">${'★'.repeat(c.tier)}</span></div>
+    <div class="art"><span class="num">${c.num}</span></div>
+    <div class="nm">${esc(c.name)}</div>
+    <div class="st"><span></span><span class="hd">IN</span><span class="hd">OUT</span>
+      <span class="lb atk">ATK</span><span class="v atk${hurt(c.ins, c.ins0)}">${c.ins}</span><span class="v atk${hurt(c.out, c.out0)}">${c.out}</span>
+      <span class="lb def">DEF</span><span class="v def">${c.idef}</span><span class="v def">${c.odef}</span></div>
+    ${c.revealed && side === 'me' ? '<span class="seen" title="Your opponent has seen this card">SEEN</span>' : ''}`;
+}
+function cardHTML(c, side, cls = '', attrs = '') {
+  const hidden = !!c.hidden;
+  const label = hidden ? 'Face-down card' : `${c.name}, ${c.pos}. Attack inside ${c.ins}, outside ${c.out}. Defense inside ${c.idef}, outside ${c.odef}`;
+  return `<div class="card ${hidden ? 'is-hidden' : 't' + c.tier} ${cls}" data-id="${c.id}" tabindex="0" role="button" aria-label="${esc(label)}" ${attrs}>
+    <div class="inner"><div class="face front">${hidden ? '' : frontHTML(c, side)}</div><div class="face back">${BACK}</div></div></div>`;
+}
+
+/* ---------- state ---------- */
+let ctl = null, view = null, busy = Promise.resolve();
+let hpSel = Number(store.get('hd.hp')) || 100;
+const ui = { sel: null, kind: null, pick: [], peek: null };
+const seenIds = { me: new Set(), opp: new Set(), bench: new Set() };
+
+function queue(v, events) {
+  busy = busy.then(() => play(v, events || [])).catch(err => console.error(err));
+  return busy;
+}
+async function play(v, events) {
+  for (const ev of events) if (ev.e === 'attack') await animAttack(ev, v);
+  view = v;
+  if (events.some(e => e.e === 'turn' || e.e === 'start')) { ui.sel = null; ui.kind = null; ui.peek = null; }
+  render();
+  for (const ev of events) {
+    if (ev.e === 'start') await banner(ev.first === v.you ? 'Your ball' : 'Their ball', 'Tip-off', ev.first === v.you);
+    else if (ev.e === 'turn' && v.phase === 'play') await banner(ev.p === v.you ? 'Your turn' : `${v.opp.name}'s turn`, `Turn ${v.turnNo}`, ev.p === v.you);
+  }
+  if (v.phase === 'over') { await wait(T(400)); showOver(); }
+}
+
+/* ---------- render ---------- */
+function setHp(which, hp, max) {
+  const bar = $(which === 'me' ? '#myHp' : '#oppHp');
+  const pct = Math.max(0, hp / max * 100) + '%';
+  bar.querySelector('.fill').style.width = pct;
+  bar.querySelector('.trail').style.width = pct;
+  bar.classList.toggle('low', hp / max <= .25);
+  $(which === 'me' ? '#myHpNum' : '#oppHpNum').innerHTML = `${hp}<small> / ${max}</small>`;
+}
+function render() {
+  const v = view; if (!v) return;
+  $('#myName').textContent = v.me.name;
+  $('#oppName').textContent = v.opp.name;
+  $('#oppDeck').textContent = v.opp.benchCount;
+  setHp('me', v.me.hp, v.hpMax); setHp('opp', v.opp.hp, v.hpMax);
+
+  const setup = v.phase === 'setup';
+  const targeting = v.phase === 'play' && v.myTurn && ui.kind && ui.sel && ui.sel.type === 'field';
+
+  const playing = v.phase === 'play' && v.myTurn;
+  const selField = playing && ui.sel && ui.sel.type === 'field' ? E.slotGroup(ui.sel.slot) : null;
+  const selBench = playing && ui.sel && ui.sel.type === 'bench' ? (v.me.bench.find(c => c.id === ui.sel.id) || {}).grp : null;
+
+  // opponent field (mirrored: backcourt on top, frontcourt facing the midcourt line)
+  $('#oppField').innerHTML = formation(v.opp.field, 'opp', (c, i) => {
+    const cls = [!seenIds.opp.has(c.id) && seenIds.opp.size ? 'enter' : '', targeting ? 'target' : '', ui.peek === c.id ? 'peek' : ''].join(' ');
+    return cardHTML(c, 'opp', cls);
+  });
+
+  // my field
+  let myField = v.me.field;
+  if (setup && !v.me.ready) myField = previewField(v);
+  $('#myField').innerHTML = formation(myField, 'me', (c, i) => {
+    const sel = ui.sel && ui.sel.type === 'field' && ui.sel.slot === i;
+    const cls = [sel ? 'sel' : '', !seenIds.me.has(c.id) && seenIds.me.size && !setup ? 'enter' : '',
+      selBench ? (E.slotGroup(i) === selBench ? 'ok' : 'dim') : ''].join(' ');
+    return cardHTML(c, 'me', cls);
+  });
+
+  // bench, split by court group
+  const picking = setup && !v.me.ready;
+  const pickedIn = g => ui.pick.filter(id => (v.me.bench.find(c => c.id === id) || {}).grp === g).length;
+  $('#benchTitle').textContent = picking ? 'Your deck · pick your starting five' : 'Bench';
+  $('#benchSub').textContent = picking ? `${ui.pick.length} / 5 picked` : `${v.me.bench.length} cards`;
+  $('#bench').innerHTML = ['FC', 'BC'].map(g => {
+    const need = g === 'FC' ? E.FRONT : E.FIELD - E.FRONT;
+    const label = (g === 'FC' ? 'Frontcourt' : 'Backcourt') + (picking ? ` <b>${pickedIn(g)}/${need}</b>` : '');
+    const cards = v.me.bench.filter(c => c.grp === g).map(c => {
+      const order = ui.pick.indexOf(c.id);
+      const sel = ui.sel && ui.sel.type === 'bench' && ui.sel.id === c.id;
+      const full = picking && order < 0 && pickedIn(g) >= need;
+      const cls = [sel ? 'sel' : '', picking && order >= 0 ? 'picked' : '', !seenIds.bench.has(c.id) && seenIds.bench.size ? 'enter' : '',
+        full ? 'dim' : '', selField ? (c.grp === selField ? 'ok' : 'dim') : ''].join(' ');
+      return `<div class="slot" data-side="bench" data-id="${c.id}">${cardHTML(c, 'me', cls, order >= 0 && picking ? `data-order="${order + 1}"` : '')}</div>`;
+    }).join('');
+    return `<div class="bgroup"><span class="bl">${label}</span><div class="bcards">${cards}</div></div>`;
+  }).join('');
+
+  seenIds.opp = new Set(v.opp.field.filter(Boolean).map(c => c.id));
+  seenIds.me = new Set(v.me.field.filter(Boolean).map(c => c.id));
+  seenIds.bench = new Set(v.me.bench.map(c => c.id));
+
+  renderMid();
+  $('#log').innerHTML = v.log.length
+    ? v.log.map(l => `<li class="${l.mine ? 'mine' : ''} ${l.kind}">${esc(l.text)}</li>`).join('')
+    : '<li class="empty">Nothing yet. Set your lineup.</li>';
+}
+
+function formation(cards, side, cell) {
+  const slot = i => {
+    const c = cards[i], g = E.slotGroup(i);
+    if (!c) return `<div class="slot empty" data-n="${g}"></div>`;
+    return `<div class="slot" data-side="${side}" data-slot="${i}">${cell(c, i)}</div>`;
+  };
+  const row = (idx, g) => `<div class="zone ${g.toLowerCase()}"><span class="zl">${g === 'FC' ? 'Front' : 'Back'}</span><div class="zrow">${idx.map(slot).join('')}</div></div>`;
+  const fc = row([0, 1], 'FC'), bc = row([2, 3, 4], 'BC');
+  return side === 'opp' ? bc + fc : fc + bc;
+}
+function previewField(v) {
+  const picks = ui.pick.map(id => v.me.bench.find(c => c.id === id)).filter(Boolean);
+  const fc = picks.filter(c => c.grp === 'FC'), bc = picks.filter(c => c.grp === 'BC');
+  return [fc[0], fc[1], bc[0], bc[1], bc[2]].map(c => c || null);
+}
+function selectedCard() {
+  if (!ui.sel || !view) return null;
+  return ui.sel.type === 'field' ? view.me.field[ui.sel.slot] : view.me.bench.find(c => c.id === ui.sel.id);
+}
+function statLine(c) {
+  return `<span class="stat a">ATK ${c.ins}/${c.out}</span> · <span class="stat d">DEF ${c.idef}/${c.odef}</span>`;
+}
+function renderMid() {
+  const v = view, pill = $('#turnPill'), hint = $('#hint'), act = $('#actions');
+  let h = '', a = '';
+  pill.className = 'turnpill';
+  if (v.phase === 'setup') {
+    pill.textContent = 'Lineup';
+    if (!v.me.ready) {
+      h = `Pick <b>2 frontcourt</b> and <b>3 backcourt</b> starters. They go on court face down.`;
+      a = `<button class="btn ghost" data-act="auto">Auto-pick</button><button class="btn primary" data-act="lock" ${ui.pick.length === 5 ? '' : 'disabled'}>Lock lineup</button>`;
+    } else h = `Lineup locked. Waiting for <b>${esc(v.opp.name)}</b> to set theirs…`;
+  } else if (v.phase === 'play') {
+    pill.textContent = `Turn ${v.turnNo} · ${v.myTurn ? 'You' : esc(v.opp.name)}`;
+    pill.classList.add(v.myTurn ? 'mine' : 'theirs');
+    const peekCard = ui.peek && v.opp.field.find(c => c && c.id === ui.peek);
+    if (!v.myTurn) {
+      h = `<b>${esc(v.opp.name)}</b> is on the clock…`;
+    } else {
+      const c = selectedCard();
+      if (ui.kind && c) {
+        h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>).`;
+        a = `<button class="btn ghost" data-act="cancel">Cancel</button>`;
+      } else if (c && ui.sel.type === 'field') {
+        h = `<b>${esc(c.name)}</b> · ${statLine(c)}${v.attacked ? '<br>Attack used this turn. Tap a green bench card to sub.' : '<br>Or tap a green bench card to sub them out.'}`;
+        a = (v.attacked ? '' : `<button class="btn atk" data-act="inside">Inside<b>${c.ins}</b></button><button class="btn atk" data-act="outside">Outside<b>${c.out}</b></button>`)
+          + `<button class="btn primary" data-act="end">End turn</button>`;
+      } else if (c) {
+        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>Tap a green ${c.grp === 'FC' ? 'frontcourt' : 'backcourt'} starter to sub them in.`;
+        a = `<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="end">End turn</button>`;
+      } else {
+        h = v.attacked ? 'Attack used. Make subs or end your turn.' : 'Select a starter to attack with, or a bench card to sub in. Subs stay within frontcourt or backcourt.';
+        a = `<button class="btn primary" data-act="end">End turn</button>`;
+      }
+    }
+    if (peekCard && !ui.kind) h = peekCard.hidden ? 'Face-down card. Its ratings stay hidden until it is attacked or attacks.' : `<b>${esc(peekCard.name)}</b> · ${statLine(peekCard)}`;
+  } else {
+    pill.textContent = 'Final';
+    h = v.winner === v.you ? 'You won.' : `${esc(v.opp.name)} won.`;
+    a = `<button class="btn primary" data-act="again">Play again</button>`;
+  }
+  hint.innerHTML = h; act.innerHTML = a;
+}
+
+/* ---------- interaction ---------- */
+function act(a) { if (ctl) ctl.act(a); }
+let animating = false;
+document.addEventListener('click', e => {
+  if (!view || $('#game').hidden) return;
+  const btn = e.target.closest('[data-act]');
+  if (btn) return onButton(btn.dataset.act);
+  const slot = e.target.closest('.slot[data-side]');
+  if (!slot || !slot.querySelector('.card') || animating) return;
+  const side = slot.dataset.side;
+  const v = view;
+  if (v.phase === 'setup' && !v.me.ready) {
+    if (side === 'bench') {
+      const id = slot.dataset.id, i = ui.pick.indexOf(id);
+      if (i >= 0) ui.pick.splice(i, 1);
+      else {
+        const g = (v.me.bench.find(c => c.id === id) || {}).grp;
+        const need = g === 'FC' ? E.FRONT : E.FIELD - E.FRONT;
+        const have = ui.pick.filter(pid => (v.me.bench.find(c => c.id === pid) || {}).grp === g).length;
+        if (have >= need) toast(g === 'FC' ? 'Frontcourt is full. Tap a picked frontcourt card to drop it first.' : 'Backcourt is full. Tap a picked backcourt card to drop it first.');
+        else ui.pick.push(id);
+      }
+    } else if (side === 'me') {
+      const id = slot.querySelector('.card').dataset.id;
+      ui.pick = ui.pick.filter(pid => pid !== id);
+    }
+    return render();
+  }
+  if (v.phase !== 'play') return;
+  if (side === 'opp') {
+    const id = slot.querySelector('.card').dataset.id;
+    if (v.myTurn && ui.kind && ui.sel && ui.sel.type === 'field') {
+      act({ t: 'attack', slot: ui.sel.slot, target: Number(slot.dataset.slot), kind: ui.kind });
+      ui.sel = null; ui.kind = null; ui.peek = null;
+      return;
+    }
+    ui.peek = ui.peek === id ? null : id;
+    return render();
+  }
+  if (!v.myTurn) return;
+  ui.peek = null; ui.kind = null;
+  if (side === 'me') {
+    const s = Number(slot.dataset.slot);
+    if (ui.sel && ui.sel.type === 'bench') {
+      const bc = v.me.bench.find(c => c.id === ui.sel.id);
+      if (bc && bc.grp !== E.slotGroup(s)) { toast(subMsg(bc.grp)); return; }
+      act({ t: 'swap', slot: s, benchId: ui.sel.id }); ui.sel = { type: 'field', slot: s }; return;
+    }
+    ui.sel = ui.sel && ui.sel.type === 'field' && ui.sel.slot === s ? null : { type: 'field', slot: s };
+  } else if (side === 'bench') {
+    const id = slot.dataset.id;
+    if (ui.sel && ui.sel.type === 'field') {
+      const s = ui.sel.slot, bc = v.me.bench.find(c => c.id === id);
+      if (bc && bc.grp !== E.slotGroup(s)) {
+        ui.sel = { type: 'bench', id }; render(); return;
+      }
+      act({ t: 'swap', slot: s, benchId: id }); ui.sel = { type: 'field', slot: s }; return;
+    }
+    ui.sel = ui.sel && ui.sel.id === id ? null : { type: 'bench', id };
+  }
+  render();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { ui.sel = null; ui.kind = null; ui.peek = null; if (view) render(); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('card')) { e.preventDefault(); e.target.click(); }
+});
+function subMsg(g) { return g === 'FC' ? 'Frontcourt players can only sub for frontcourt starters.' : 'Backcourt players can only sub for backcourt starters.'; }
+function onButton(k) {
+  const v = view;
+  if (k === 'auto') {
+    ui.pick = E.bestFive([...v.me.bench]).map(c => c.id);
+    render();
+  } else if (k === 'lock') { act({ t: 'lineup', ids: ui.pick.slice() }); ui.pick = []; }
+  else if (k === 'inside' || k === 'outside') { ui.kind = k; render(); }
+  else if (k === 'cancel') { ui.kind = null; if (ui.sel && ui.sel.type === 'bench') ui.sel = null; render(); }
+  else if (k === 'end') { ui.sel = null; ui.kind = null; act({ t: 'end' }); }
+  else if (k === 'again') { closeModal(); ctl && ctl.rematch(); }
+  else if (k === 'menu') { closeModal(); leaveGame(); }
+}
+
+/* ---------- animations ---------- */
+function cardAt(side, slot) { return document.querySelector(`.slot[data-side="${side}"][data-slot="${slot}"] .card`); }
+function reveal(el, c, side) {
+  if (!el || !el.classList.contains('is-hidden')) return;
+  el.querySelector('.front').innerHTML = frontHTML(c, side);
+  el.classList.add('t' + c.tier);
+  void el.offsetWidth;
+  el.classList.remove('is-hidden');
+}
+function floater(text, cls, el) {
+  const r = el.getBoundingClientRect();
+  const f = document.createElement('div');
+  f.className = 'floater ' + cls; f.textContent = text;
+  f.style.left = (r.left + r.width / 2) + 'px'; f.style.top = (r.top + r.height / 2) + 'px';
+  $('#fx').appendChild(f); setTimeout(() => f.remove(), 1400);
+}
+function ring(el, color) {
+  const arena = $('#arena'), ar = arena.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const d = document.createElement('div');
+  d.className = 'impact'; d.style.borderColor = color;
+  d.style.left = (r.left - ar.left + r.width / 2) + 'px'; d.style.top = (r.top - ar.top + r.height / 2) + 'px';
+  d.style.boxShadow = `0 0 30px ${color}`;
+  arena.appendChild(d); setTimeout(() => d.remove(), 600);
+}
+async function animAttack(ev, nextView) {
+  animating = true;
+  try {
+    const mine = ev.p === view.you;
+    const aSide = mine ? 'me' : 'opp', tSide = mine ? 'opp' : 'me';
+    const aEl = cardAt(aSide, ev.slot), tEl = cardAt(tSide, ev.target);
+    if (!aEl || !tEl) return;
+    document.querySelectorAll('.card.target').forEach(c => c.classList.remove('target'));
+    aEl.classList.remove('sel');
+    aEl.classList.add('attacking');
+    aEl.style.transform = 'translateY(-8px)';
+    reveal(aEl, ev.atk, aSide); reveal(tEl, ev.def, tSide);
+    await wait(T(650));
+
+    const co = document.createElement('div');
+    co.className = 'callout';
+    co.innerHTML = `<span class="k">${ev.kind} attack</span><div class="nums"><span class="na">${ev.atkVal}</span><i>VS</i><span class="nd">${ev.defVal}</span></div><span class="res"></span>`;
+    $('#arena').appendChild(co);
+    await wait(T(650));
+
+    const ar = aEl.getBoundingClientRect(), tr = tEl.getBoundingClientRect();
+    const dx = (tr.left + tr.width / 2) - (ar.left + ar.width / 2), dy = (tr.top + tr.height / 2) - (ar.top + ar.height / 2);
+    const lunge = aEl.animate([
+      { transform: 'translate(0,-8px) scale(1)' },
+      { transform: `translate(${dx * .8}px,${dy * .8}px) scale(1.12)`, offset: .5 },
+      { transform: 'translate(0,-8px) scale(1)' }
+    ], { duration: T(640), easing: 'cubic-bezier(.55,0,.25,1)' });
+    await wait(T(320));
+
+    const res = co.querySelector('.res');
+    if (ev.result === 'score') {
+      ring(tEl, '#ffb649');
+      tEl.classList.add('shake');
+      res.textContent = `Bucket · ${ev.dmg} damage`; res.className = 'res ' + (mine ? 'good' : 'bad');
+      floater(`−${ev.dmg}`, 'bad', $(tSide === 'opp' ? '#oppHp' : '#myHp'));
+      setHp(tSide, ev.hpAfter, view.hpMax);
+      await lunge.finished.catch(() => {});
+      tEl.classList.remove('shake'); void tEl.offsetWidth;
+      tEl.classList.add('beaten');
+      await wait(T(650));
+    } else if (ev.result === 'blocked') {
+      ring(tEl, '#a896ff');
+      res.textContent = `Stopped · −${ev.diff} ${ev.kind}`; res.className = 'res ' + (mine ? 'bad' : 'good');
+      await lunge.finished.catch(() => {});
+      aEl.classList.add('shake');
+      floater(`−${ev.diff} ${ev.kind === 'inside' ? 'IN' : 'OUT'}`, 'bad', aEl);
+      const vals = aEl.querySelectorAll('.v.atk');
+      const v = vals[ev.kind === 'inside' ? 0 : 1];
+      if (v) { v.textContent = ev.statAfter; v.classList.add('hurt'); }
+      await wait(T(800));
+    } else {
+      ring(tEl, '#e8eef7');
+      res.textContent = 'Stalemate'; res.className = 'res';
+      await lunge.finished.catch(() => {});
+      floater('Even', 'neutral', tEl);
+      await wait(T(700));
+    }
+    co.style.transition = 'opacity .25s'; co.style.opacity = '0';
+    setTimeout(() => co.remove(), 260);
+    aEl.classList.remove('attacking', 'shake');
+    aEl.style.transform = '';
+  } finally { animating = false; }
+}
+async function banner(text, sub, mine) {
+  const b = document.createElement('div');
+  b.className = 'banner ' + (mine ? 'mine' : 'theirs');
+  b.innerHTML = `${esc(text)}<small>${esc(sub)}</small>`;
+  $('#fx').appendChild(b);
+  await wait(T(1050));
+  setTimeout(() => b.remove(), 300);
+}
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
+}
+function showOver() {
+  closeModal();
+  const win = view.winner === view.you;
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'overModal';
+  m.innerHTML = `<div class="panel box"><span class="eyebrow">Final · turn ${view.turnNo}</span>
+    <h3 class="${win ? 'win' : 'lose'}">${win ? 'Victory' : 'Defeat'}</h3>
+    <p>${esc(view.me.name)} ${view.me.hp} HP · ${esc(view.opp.name)} ${view.opp.hp} HP</p>
+    <div class="row" style="justify-content:center"><button class="btn ghost" data-act="menu">Menu</button><button class="btn primary" data-act="again">${ctl && ctl.online ? 'Ask for rematch' : 'Play again'}</button></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) onButton(b.dataset.act); });
+}
+function closeModal() { const m = $('#overModal'); if (m) m.remove(); }
+
+/* ---------- controllers ---------- */
+function resetUi() { ui.sel = null; ui.kind = null; ui.pick = []; ui.peek = null; seenIds.me = new Set(); seenIds.opp = new Set(); seenIds.bench = new Set(); view = null; busy = Promise.resolve(); }
+function showGame() { $('#menu').hidden = true; $('#game').hidden = false; scrollTo(0, 0); }
+function leaveGame() { if (ctl) ctl.close(); ctl = null; closeModal(); $('#game').hidden = true; $('#menu').hidden = false; resetUi(); }
+$('#quit').addEventListener('click', leaveGame);
+
+class LocalCtl {
+  constructor(hp, saved) {
+    this.online = false; this.hp = hp;
+    this.s = saved || E.createGame({ hp, names: ['You', 'Bot'] });
+    queue(E.viewFor(this.s, 0), []);
+    this.bot();
+  }
+  act(a) {
+    if (this.dead) return;
+    const r = E.apply(this.s, 0, a);
+    if (!r.ok) { toast(r.error); render(); return; }
+    queue(E.viewFor(this.s, 0), r.events);
+    this.bot();
+  }
+  async bot() {
+    if (this.running) return; this.running = true;
+    try {
+      for (let n = 0; n < 40; n++) {
+        const a = E.botStep(this.s, 1);
+        if (!a) break;
+        await busy;
+        await wait(T(a.t === 'lineup' ? 500 : a.t === 'swap' ? 500 : 850));
+        if (this.dead) break;
+        const r = E.apply(this.s, 1, a);
+        if (!r.ok) break;
+        queue(E.viewFor(this.s, 0), r.events);
+      }
+    } finally { this.running = false; }
+  }
+  rematch() { this.close(); resetUi(); ctl = new LocalCtl(this.hp); }
+  close() { this.dead = true; }
+}
+
+class OnlineCtl {
+  constructor(url, name, onStatus) { this.online = true; this.url = url; this.name = name; this.onStatus = onStatus; }
+  connect() {
+    return new Promise((res, rej) => {
+      let ws;
+      try { ws = new WebSocket(this.url); } catch (e) { return rej(e); }
+      this.ws = ws;
+      const t = setTimeout(() => { try { ws.close(); } catch (e) {} rej(new Error('timeout')); }, 6000);
+      ws.onopen = () => { clearTimeout(t); res(); };
+      ws.onerror = () => { clearTimeout(t); rej(new Error('error')); };
+      ws.onmessage = m => { let d; try { d = JSON.parse(m.data); } catch (e) { return; } this.onMsg(d); };
+      ws.onclose = () => { if (!this.dead && this.started) { toast('Connection to the game server closed.'); } };
+    });
+  }
+  send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); }
+  onMsg(d) {
+    if (d.type === 'created') this.onStatus(`Room <b class="code">${esc(d.code)}</b> Share this code. Waiting for a friend to join…`);
+    else if (d.type === 'error') { if (this.started) toast(d.msg); else this.onStatus(esc(d.msg), true); }
+    else if (d.type === 'state') {
+      if (!this.started || d.fresh) { this.started = true; closeModal(); resetUi(); showGame(); }
+      queue(d.view, d.events);
+    } else if (d.type === 'rematch-wait') toast('Rematch requested. Waiting for your opponent…');
+    else if (d.type === 'left') { toast('Your opponent left the game.'); this.started = false; }
+  }
+  act(a) { this.send({ type: 'action', action: a }); }
+  rematch() { this.send({ type: 'rematch' }); }
+  close() { this.dead = true; try { this.ws && this.ws.close(); } catch (e) {} }
+}
+
+/* ---------- menu ---------- */
+function setHpSel(hp) {
+  hpSel = E.clampHp(hp); store.set('hd.hp', String(hpSel));
+  let matched = false;
+  document.querySelectorAll('#hpChips .chip').forEach(c => { const on = Number(c.dataset.hp) === hpSel; matched ||= on; c.setAttribute('aria-pressed', on); });
+  $('#hpCustom').value = matched ? '' : hpSel;
+}
+$('#hpChips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) setHpSel(c.dataset.hp); });
+$('#hpCustom').addEventListener('change', e => { if (e.target.value) setHpSel(e.target.value); });
+setHpSel(hpSel);
+
+$('#startBot').addEventListener('click', () => { resetUi(); showGame(); ctl = new LocalCtl(hpSel); });
+
+const defaultServer = /^https?:$/.test(location.protocol) && !/claude|anthropic|usercontent/.test(location.host)
+  ? (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host
+  : 'ws://localhost:8080';
+$('#server').value = store.get('hd.server') || defaultServer;
+$('#pname').value = store.get('hd.name') || '';
+function netStatus(html, err) { const s = $('#netStatus'); s.innerHTML = html; s.classList.toggle('err', !!err); }
+async function goOnline(kind) {
+  const url = $('#server').value.trim(), name = $('#pname').value.trim() || 'Player';
+  const code = $('#joinCode').value.trim().toUpperCase();
+  if (kind === 'join' && code.length !== 4) return netStatus('Enter the 4-letter room code your friend shared.', true);
+  store.set('hd.server', url); store.set('hd.name', name);
+  if (ctl) ctl.close();
+  netStatus('Connecting…');
+  const c = new OnlineCtl(url, name, netStatus);
+  try { await c.connect(); }
+  catch (e) { return netStatus(`Could not reach a game server at ${esc(url)}. Start it with <b>npm start</b> in the game folder, then open the address it prints.`, true); }
+  ctl = c;
+  if (kind === 'create') c.send({ type: 'create', name, hp: hpSel });
+  else c.send({ type: 'join', name, code });
+}
+$('#createRoom').addEventListener('click', () => goOnline('create'));
+$('#joinRoom').addEventListener('click', () => goOnline('join'));
+$('#joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') goOnline('join'); });
+
+// hero fan
+$('#fan').innerHTML = E.makeDeck(12).sort((a, b) => b.tier - a.tier).slice(0, 3).map(c => cardHTML(c, 'menu', '', 'tabindex="-1"')).join('');
+
+/* ---------- keep a running bot game across page updates ---------- */
+const hot = window.claude && window.claude.hot;
+if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (ctl && !ctl.online && ctl.s ? { s: ctl.s, hp: ctl.hp } : {}));
+const boot = d => {
+  if (d && d.s && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
+};
+if (hot && typeof hot.ready === 'function') hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
+})();
+</script>
