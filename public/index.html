@@ -103,8 +103,6 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 @keyframes lowhp{50%{filter:brightness(1.7)}}
 .hpnum{font-family:var(--f-display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
 .hpnum small{color:var(--muted);font-size:13px;font-weight:600}
-.deckpile{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-family:var(--f-display);letter-spacing:.1em;text-transform:uppercase}
-.deckpile .mini{width:14px;height:20px;border-radius:3px;border:1px solid var(--opp);box-shadow:0 0 8px -2px var(--opp), 3px -3px 0 -1px #04060b, 3px -3px 0 0 var(--opp)}
 
 .field{display:grid;gap:6px;padding:8px 4px;position:relative}
 .zone{position:relative;display:flex;justify-content:center}
@@ -165,7 +163,14 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     radial-gradient(circle at 50% 135%, transparent 30%, color-mix(in srgb, var(--frame) 18%, transparent) 31%, transparent 33%),
     linear-gradient(180deg, color-mix(in srgb, var(--frame) 12%, transparent), transparent);
   border:1px solid rgba(255,255,255,.05)}
-.art .num{font-family:var(--f-display);font-weight:800;font-size:46cqw;line-height:1;color:transparent;-webkit-text-stroke:1px color-mix(in srgb, var(--frame) 70%, transparent);opacity:.8}
+.art .sil{position:absolute;left:50%;bottom:0;translate:-50% 0;height:94%;max-width:96%;width:auto;fill:color-mix(in srgb, var(--frame) 32%, #0b111c);stroke:color-mix(in srgb, var(--frame) 60%, transparent);stroke-width:1.2}
+.sta{display:flex;gap:1.6cqw;padding:0 1cqw}
+.sta i{flex:1;height:max(2px,3.6cqw);border-radius:2cqw;background:var(--good);box-shadow:0 0 6px -1px var(--good)}
+.sta.mid i{background:var(--atk);box-shadow:0 0 6px -1px var(--atk)}
+.sta.low i{background:var(--bad);box-shadow:0 0 6px -1px var(--bad)}
+.sta i.off{background:rgba(255,255,255,.1);box-shadow:none}
+.back .sta{position:absolute;bottom:11cqw;left:16cqw;right:16cqw}
+.card.tired{filter:saturate(.35) brightness(.7)}
 .nm{font-family:var(--f-display);font-weight:700;text-transform:uppercase;font-size:max(8px,10.5cqw);line-height:1.02;letter-spacing:.02em;min-height:2.04em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
 .st{display:grid;grid-template-columns:auto 1fr 1fr;gap:.5cqw 3cqw;align-items:center;font-family:var(--f-display);line-height:1}
 .st .hd{font-size:max(6px,7.5cqw);color:var(--muted);text-align:center;letter-spacing:.1em;font-weight:600}
@@ -174,6 +179,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
 .st .v{font-size:max(10px,15cqw);font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .st .v.atk{color:#ffe3b3}.st .v.def{color:#ddd5ff}
 .st .v.hurt{color:var(--bad)}
+.st .v.zero{color:#fff;background:var(--bad);border-radius:2cqw}
 .seen{position:absolute;top:-1px;right:-1px;font-family:var(--f-display);font-weight:700;font-size:max(6px,7cqw);letter-spacing:.1em;padding:1cqw 3cqw;border-radius:0 9px 0 4cqw;background:rgba(51,196,255,.18);color:var(--opp)}
 .back{transform:rotateY(180deg);background:radial-gradient(circle at 50% 50%, #0e1b2b, #060a12 75%);border:1px solid color-mix(in srgb, var(--opp) 55%, transparent);box-shadow:0 0 18px -6px var(--opp), inset 0 0 22px -10px var(--opp);color:var(--opp);display:grid;place-items:center}
 .back svg{width:72%;height:auto;filter:drop-shadow(0 0 4px currentColor)}
@@ -252,7 +258,6 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
   .side-head .who{font-size:15px}
   .hpnum{font-size:17px;min-width:60px}
   .field{padding:8px 0}
-  .deckpile .lbl{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
@@ -263,7 +268,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
   <section class="hero">
     <div class="eyebrow">Street-legal card battler · 5 v 5</div>
     <h1>Hardwood<span>Duel</span></h1>
-    <p>Build a starting five from a random twelve-card deck, keep your lineup face down, and attack inside or outside. Beat a defender and the difference comes off their HP. Lose the matchup and your scorer pays for it.</p>
+    <p>Pick a starting five from a random twelve-card deck and ride with them all game. Keep your lineup face down, attack inside or outside, and manage stamina. Beat a defender and the difference comes off their HP and their defense. Lose the matchup and your scorer pays for it.</p>
     <div class="fan" id="fan"></div>
   </section>
   <section class="modes">
@@ -297,11 +302,13 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     <div class="panel rules">
       <div class="eyebrow">How a turn works</div>
       <ol>
-        <li><b>Set your five.</b> 2 frontcourt (PF, C) and 3 backcourt (PG, SG, SF) from your 12 cards. Your opponent sees only card backs.</li>
-        <li><b>Sub freely.</b> On your turn, swap starters with bench cards as often as you like, frontcourt for frontcourt and backcourt for backcourt.</li>
+        <li><b>Set your five.</b> 2 frontcourt (PF, C) and 3 backcourt (PG, SG, SF) from your 12 cards. They play the whole game, no subs. Your opponent sees only card backs.</li>
         <li><b>Attack once.</b> Pick a starter, choose inside or outside, then pick a target. Both cards flip.</li>
-        <li><b>Score:</b> attack beats defense, the difference hits their HP and the defender is out. A fresh card comes off their deck.</li>
+        <li><b>Stamina:</b> every starter has 5 bars. Each attack burns one and cuts all their ratings by 10%. No bars left, no more attacks.</li>
+        <li><b>Score:</b> attack beats defense, the difference hits their HP and comes off the defender's rating for that shot type.</li>
+        <li><b>Wide open:</b> a defender at 0 on that defense lets the full attack through to HP.</li>
         <li><b>Stopped:</b> defense wins, the difference is taken off your scorer's rating for that shot type.</li>
+        <li>Every name is unique: you and your opponent never share a player.</li>
       </ol>
     </div>
   </section>
@@ -312,10 +319,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     <div class="panel side-head opp">
       <div class="who"><i></i><span id="oppName">Bot</span></div>
       <div class="hp" id="oppHp"><div class="trail"></div><div class="fill"></div></div>
-      <div class="row" style="gap:12px;flex-wrap:nowrap">
-        <div class="deckpile" title="Cards left in opponent's deck"><div class="mini"></div><span id="oppDeck">7</span><span class="lbl">deck</span></div>
-        <div class="hpnum" id="oppHpNum">100</div>
-      </div>
+      <div class="hpnum" id="oppHpNum">100</div>
     </div>
     <div class="field opp" id="oppField"></div>
     <div class="panel mid" id="mid">
@@ -335,7 +339,7 @@ input.inp.code{font-family:var(--f-display);font-weight:700;letter-spacing:.3em;
     </div>
   </div>
   <aside class="panel log">
-    <div class="toprow"><span class="eyebrow">Play-by-play</span><button class="btn ghost" id="quit" style="padding:5px 10px;font-size:12px">Leave game</button></div>
+    <div class="toprow"><span class="eyebrow">Play-by-play</span><span class="row" style="gap:6px"><button class="btn ghost" id="mute" style="padding:5px 10px;font-size:12px" aria-pressed="false">Sound on</button><button class="btn ghost" id="quit" style="padding:5px 10px;font-size:12px">Leave game</button></span></div>
     <ul id="log"></ul>
   </aside>
 </main>
@@ -357,23 +361,79 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 };
 
+/* ---------- sound (synthesized with Web Audio, no files) ---------- */
+const sfx = (() => {
+  let ctx = null, muted = store.get('hd.mute') === '1';
+  function ac() {
+    if (!ctx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { ctx = new C(); } catch (e) { return null; }
+    }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
+  }
+  function tone(c, f, d, o = {}) {
+    const t = c.currentTime + (o.at || 0), osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(f, t);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .15, t + .01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    osc.connect(g).connect(c.destination); osc.start(t); osc.stop(t + d + .02);
+  }
+  function noise(c, d, o = {}) {
+    const t = c.currentTime + (o.at || 0), n = Math.floor(c.sampleRate * d), buf = c.createBuffer(1, n, c.sampleRate), data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = o.filter || 'bandpass'; f.Q.value = o.q || 1;
+    f.frequency.setValueAtTime(o.f || 1200, t); if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t + d);
+    g.gain.setValueAtTime(o.vol || .2, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(f).connect(g).connect(c.destination); src.start(t); src.stop(t + d);
+  }
+  const S = {
+    tap: c => tone(c, 680, .06, { type: 'triangle', vol: .07 }),
+    lock: c => { tone(c, 440, .1, { type: 'square', vol: .05 }); tone(c, 660, .16, { type: 'square', vol: .05, at: .09 }); },
+    whistle: c => { for (let i = 0; i < 6; i++) tone(c, i % 2 ? 2050 : 2300, .07, { vol: .06, at: i * .05 }); },
+    turn: c => { tone(c, 880, .1, { type: 'triangle', vol: .08 }); tone(c, 1320, .14, { type: 'triangle', vol: .08, at: .09 }); },
+    whoosh: c => noise(c, .32, { f: 350, to: 2600, q: .7, vol: .22 }),
+    swish: c => { noise(c, .25, { filter: 'highpass', f: 2500, to: 6000, vol: .14 }); tone(c, 520, .2, { type: 'triangle', to: 1040, vol: .08, at: .05 }); },
+    hit: c => { tone(c, 150, .28, { to: 55, vol: .3 }); noise(c, .08, { f: 700, vol: .18 }); },
+    block: c => { tone(c, 210, .2, { type: 'square', to: 90, vol: .08 }); noise(c, .14, { filter: 'lowpass', f: 600, vol: .3 }); },
+    tie: c => tone(c, 330, .22, { type: 'triangle', vol: .09 }),
+    err: c => tone(c, 160, .14, { type: 'sawtooth', vol: .05 }),
+    buzzer: c => tone(c, 110, .6, { type: 'sawtooth', vol: .09 }),
+    win: c => [523, 659, 784, 1047].forEach((f, i) => tone(c, f, .28, { type: 'triangle', vol: .1, at: .5 + i * .12 })),
+    lose: c => [392, 330, 262].forEach((f, i) => tone(c, f, .34, { type: 'triangle', vol: .1, at: .5 + i * .18 }))
+  };
+  return {
+    play(k) { if (muted) return; const c = ac(); if (c && S[k]) try { S[k](c); } catch (e) {} },
+    get muted() { return muted; },
+    toggle() { muted = !muted; store.set('hd.mute', muted ? '1' : '0'); return muted; }
+  };
+})();
+
 /* ---------- card markup ---------- */
 const BACK = '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="50" cy="50" r="38"/><path d="M12 50h76M50 12v76"/><path d="M24 22c14 14 14 42 0 56M76 22c-14 14-14 42 0 56"/></svg>';
+// Placeholder player picture until real card art exists.
+const SIL = '<svg class="sil" viewBox="0 0 120 84" aria-hidden="true"><circle cx="60" cy="25" r="19"/><path d="M8 86c0-27 22-40 52-40s52 13 52 40z"/></svg>';
+function staHTML(n) {
+  const max = E.STAMINA, lvl = n >= 3 ? '' : n === 2 ? ' mid' : ' low';
+  return `<div class="sta${lvl}" title="Stamina ${n}/${max}">${Array.from({ length: max }, (_, i) => `<i${i < n ? '' : ' class="off"'}></i>`).join('')}</div>`;
+}
 function frontHTML(c, side) {
-  const hurt = (v, v0) => v < v0 ? ' hurt' : '';
+  const cls = (v, v0) => (v === 0 ? ' zero' : v < v0 ? ' hurt' : '');
   return `<div class="f-top"><span class="pos">${c.pos}<i>${c.grp}</i></span><span class="tier">${'★'.repeat(c.tier)}</span></div>
-    <div class="art"><span class="num">${c.num}</span></div>
+    <div class="art">${SIL}</div>${staHTML(c.sta)}
     <div class="nm">${esc(c.name)}</div>
     <div class="st"><span></span><span class="hd">IN</span><span class="hd">OUT</span>
-      <span class="lb atk">ATK</span><span class="v atk${hurt(c.ins, c.ins0)}">${c.ins}</span><span class="v atk${hurt(c.out, c.out0)}">${c.out}</span>
-      <span class="lb def">DEF</span><span class="v def">${c.idef}</span><span class="v def">${c.odef}</span></div>
+      <span class="lb atk">ATK</span><span class="v atk${cls(c.ins, c.ins0)}">${c.ins}</span><span class="v atk${cls(c.out, c.out0)}">${c.out}</span>
+      <span class="lb def">DEF</span><span class="v def${cls(c.idef, c.idef0)}">${c.idef}</span><span class="v def${cls(c.odef, c.odef0)}">${c.odef}</span></div>
     ${c.revealed && side === 'me' ? '<span class="seen" title="Your opponent has seen this card">SEEN</span>' : ''}`;
 }
 function cardHTML(c, side, cls = '', attrs = '') {
   const hidden = !!c.hidden;
-  const label = hidden ? 'Face-down card' : `${c.name}, ${c.pos}. Attack inside ${c.ins}, outside ${c.out}. Defense inside ${c.idef}, outside ${c.odef}`;
+  const label = hidden ? `Face-down card, stamina ${c.sta}` : `${c.name}, ${c.pos}. Attack inside ${c.ins}, outside ${c.out}. Defense inside ${c.idef}, outside ${c.odef}. Stamina ${c.sta} of ${E.STAMINA}`;
   return `<div class="card ${hidden ? 'is-hidden' : 't' + c.tier} ${cls}" data-id="${c.id}" tabindex="0" role="button" aria-label="${esc(label)}" ${attrs}>
-    <div class="inner"><div class="face front">${hidden ? '' : frontHTML(c, side)}</div><div class="face back">${BACK}</div></div></div>`;
+    <div class="inner"><div class="face front">${hidden ? '' : frontHTML(c, side)}</div><div class="face back">${BACK}${hidden && c.sta != null ? staHTML(c.sta) : ''}</div></div></div>`;
 }
 
 /* ---------- state ---------- */
@@ -388,14 +448,17 @@ function queue(v, events) {
 }
 async function play(v, events) {
   for (const ev of events) if (ev.e === 'attack') await animAttack(ev, v);
+  if (events.some(e => e.e === 'ready' && e.p === v.you)) sfx.play('lock');
   view = v;
   if (events.some(e => e.e === 'turn' || e.e === 'start')) { ui.sel = null; ui.kind = null; ui.peek = null; }
   render();
   for (const ev of events) {
+    if (ev.e === 'start') sfx.play('whistle');
+    else if (ev.e === 'turn' && v.phase === 'play') sfx.play('turn');
     if (ev.e === 'start') await banner(ev.first === v.you ? 'Your ball' : 'Their ball', 'Tip-off', ev.first === v.you);
     else if (ev.e === 'turn' && v.phase === 'play') await banner(ev.p === v.you ? 'Your turn' : `${v.opp.name}'s turn`, `Turn ${v.turnNo}`, ev.p === v.you);
   }
-  if (v.phase === 'over') { await wait(T(400)); showOver(); }
+  if (v.phase === 'over') { sfx.play('buzzer'); await wait(T(400)); showOver(); }
 }
 
 /* ---------- render ---------- */
@@ -411,19 +474,14 @@ function render() {
   const v = view; if (!v) return;
   $('#myName').textContent = v.me.name;
   $('#oppName').textContent = v.opp.name;
-  $('#oppDeck').textContent = v.opp.benchCount;
   setHp('me', v.me.hp, v.hpMax); setHp('opp', v.opp.hp, v.hpMax);
 
   const setup = v.phase === 'setup';
   const targeting = v.phase === 'play' && v.myTurn && ui.kind && ui.sel && ui.sel.type === 'field';
 
-  const playing = v.phase === 'play' && v.myTurn;
-  const selField = playing && ui.sel && ui.sel.type === 'field' ? E.slotGroup(ui.sel.slot) : null;
-  const selBench = playing && ui.sel && ui.sel.type === 'bench' ? (v.me.bench.find(c => c.id === ui.sel.id) || {}).grp : null;
-
-  // opponent field (mirrored: backcourt on top, frontcourt facing the midcourt line)
+  // both fields: backcourt on the upper row, frontcourt on the bottom row
   $('#oppField').innerHTML = formation(v.opp.field, 'opp', (c, i) => {
-    const cls = [!seenIds.opp.has(c.id) && seenIds.opp.size ? 'enter' : '', targeting ? 'target' : '', ui.peek === c.id ? 'peek' : ''].join(' ');
+    const cls = [!seenIds.opp.has(c.id) && seenIds.opp.size ? 'enter' : '', targeting ? 'target' : '', ui.peek === c.id ? 'peek' : '', c.sta <= 0 ? 'tired' : ''].join(' ');
     return cardHTML(c, 'opp', cls);
   });
 
@@ -433,16 +491,17 @@ function render() {
   $('#myField').innerHTML = formation(myField, 'me', (c, i) => {
     const sel = ui.sel && ui.sel.type === 'field' && ui.sel.slot === i;
     const cls = [sel ? 'sel' : '', !seenIds.me.has(c.id) && seenIds.me.size && !setup ? 'enter' : '',
-      selBench ? (E.slotGroup(i) === selBench ? 'ok' : 'dim') : ''].join(' ');
+      !setup && c.sta <= 0 ? 'tired' : ''].join(' ');
     return cardHTML(c, 'me', cls);
   });
 
-  // bench, split by court group
+  // deck, split by court group; only shown while picking (lineups are locked for the game)
   const picking = setup && !v.me.ready;
+  $('.benchwrap').hidden = !picking;
   const pickedIn = g => ui.pick.filter(id => (v.me.bench.find(c => c.id === id) || {}).grp === g).length;
-  $('#benchTitle').textContent = picking ? 'Your deck · pick your starting five' : 'Bench';
-  $('#benchSub').textContent = picking ? `${ui.pick.length} / 5 picked` : `${v.me.bench.length} cards`;
-  $('#bench').innerHTML = ['FC', 'BC'].map(g => {
+  $('#benchTitle').textContent = 'Your deck · pick your starting five';
+  $('#benchSub').textContent = `${ui.pick.length} / 5 picked · locked for the whole game`;
+  $('#bench').innerHTML = ['BC', 'FC'].map(g => {
     const need = g === 'FC' ? E.FRONT : E.FIELD - E.FRONT;
     const label = (g === 'FC' ? 'Frontcourt' : 'Backcourt') + (picking ? ` <b>${pickedIn(g)}/${need}</b>` : '');
     const cards = v.me.bench.filter(c => c.grp === g).map(c => {
@@ -450,7 +509,7 @@ function render() {
       const sel = ui.sel && ui.sel.type === 'bench' && ui.sel.id === c.id;
       const full = picking && order < 0 && pickedIn(g) >= need;
       const cls = [sel ? 'sel' : '', picking && order >= 0 ? 'picked' : '', !seenIds.bench.has(c.id) && seenIds.bench.size ? 'enter' : '',
-        full ? 'dim' : '', selField ? (c.grp === selField ? 'ok' : 'dim') : ''].join(' ');
+        full ? 'dim' : ''].join(' ');
       return `<div class="slot" data-side="bench" data-id="${c.id}">${cardHTML(c, 'me', cls, order >= 0 && picking ? `data-order="${order + 1}"` : '')}</div>`;
     }).join('');
     return `<div class="bgroup"><span class="bl">${label}</span><div class="bcards">${cards}</div></div>`;
@@ -473,8 +532,7 @@ function formation(cards, side, cell) {
     return `<div class="slot" data-side="${side}" data-slot="${i}">${cell(c, i)}</div>`;
   };
   const row = (idx, g) => `<div class="zone ${g.toLowerCase()}"><span class="zl">${g === 'FC' ? 'Front' : 'Back'}</span><div class="zrow">${idx.map(slot).join('')}</div></div>`;
-  const fc = row([0, 1], 'FC'), bc = row([2, 3, 4], 'BC');
-  return side === 'opp' ? bc + fc : fc + bc;
+  return row([2, 3, 4], 'BC') + row([0, 1], 'FC');
 }
 function previewField(v) {
   const picks = ui.pick.map(id => v.me.bench.find(c => c.id === id)).filter(Boolean);
@@ -486,7 +544,7 @@ function selectedCard() {
   return ui.sel.type === 'field' ? view.me.field[ui.sel.slot] : view.me.bench.find(c => c.id === ui.sel.id);
 }
 function statLine(c) {
-  return `<span class="stat a">ATK ${c.ins}/${c.out}</span> · <span class="stat d">DEF ${c.idef}/${c.odef}</span>`;
+  return `<span class="stat a">ATK ${c.ins}/${c.out}</span> · <span class="stat d">DEF ${c.idef}/${c.odef}</span> · <span class="stat">STA ${c.sta}/${E.STAMINA}</span>`;
 }
 function renderMid() {
   const v = view, pill = $('#turnPill'), hint = $('#hint'), act = $('#actions');
@@ -495,7 +553,7 @@ function renderMid() {
   if (v.phase === 'setup') {
     pill.textContent = 'Lineup';
     if (!v.me.ready) {
-      h = `Pick <b>2 frontcourt</b> and <b>3 backcourt</b> starters. They go on court face down.`;
+      h = `Pick <b>2 frontcourt</b> and <b>3 backcourt</b> starters. They go on court face down and play the whole game.`;
       a = `<button class="btn ghost" data-act="auto">Auto-pick</button><button class="btn primary" data-act="lock" ${ui.pick.length === 5 ? '' : 'disabled'}>Lock lineup</button>`;
     } else h = `Lineup locked. Waiting for <b>${esc(v.opp.name)}</b> to set theirs…`;
   } else if (v.phase === 'play') {
@@ -509,22 +567,20 @@ function renderMid() {
       if (ui.kind && c) {
         h = `Pick a target for <b>${esc(c.name)}</b>'s ${ui.kind} attack (<span class="stat a">${ui.kind === 'inside' ? c.ins : c.out}</span>).`;
         a = `<button class="btn ghost" data-act="cancel">Cancel</button>`;
-      } else if (c && ui.sel.type === 'field') {
-        h = `<b>${esc(c.name)}</b> · ${statLine(c)}${v.attacked ? '<br>Attack used this turn. Tap a green bench card to sub.' : '<br>Or tap a green bench card to sub them out.'}`;
+      } else if (c) {
+        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>${v.attacked ? 'Attack used this turn.' : 'Attacking costs 1 stamina and 10% of all ratings.'}`;
         a = (v.attacked ? '' : `<button class="btn atk" data-act="inside">Inside<b>${c.ins}</b></button><button class="btn atk" data-act="outside">Outside<b>${c.out}</b></button>`)
           + `<button class="btn primary" data-act="end">End turn</button>`;
-      } else if (c) {
-        h = `<b>${esc(c.name)}</b> · ${statLine(c)}<br>Tap a green ${c.grp === 'FC' ? 'frontcourt' : 'backcourt'} starter to sub them in.`;
-        a = `<button class="btn ghost" data-act="cancel">Cancel</button><button class="btn primary" data-act="end">End turn</button>`;
       } else {
-        h = v.attacked ? 'Attack used. Make subs or end your turn.' : 'Select a starter to attack with, or a bench card to sub in. Subs stay within frontcourt or backcourt.';
+        const gassed = !v.me.field.some(f => f && f.sta > 0);
+        h = v.attacked ? 'Attack used. End your turn.' : gassed ? 'Your starters are out of stamina. End your turn.' : 'Select a starter to attack with. Each attack costs 1 stamina bar and 10% of all ratings.';
         a = `<button class="btn primary" data-act="end">End turn</button>`;
       }
     }
     if (peekCard && !ui.kind) h = peekCard.hidden ? 'Face-down card. Its ratings stay hidden until it is attacked or attacks.' : `<b>${esc(peekCard.name)}</b> · ${statLine(peekCard)}`;
   } else {
     pill.textContent = 'Final';
-    h = v.winner === v.you ? 'You won.' : `${esc(v.opp.name)} won.`;
+    h = v.winner === -1 ? 'Draw.' : v.winner === v.you ? 'You won.' : `${esc(v.opp.name)} won.`;
     a = `<button class="btn primary" data-act="again">Play again</button>`;
   }
   hint.innerHTML = h; act.innerHTML = a;
@@ -544,6 +600,7 @@ document.addEventListener('click', e => {
   if (v.phase === 'setup' && !v.me.ready) {
     if (side === 'bench') {
       const id = slot.dataset.id, i = ui.pick.indexOf(id);
+      sfx.play('tap');
       if (i >= 0) ui.pick.splice(i, 1);
       else {
         const g = (v.me.bench.find(c => c.id === id) || {}).grp;
@@ -562,6 +619,7 @@ document.addEventListener('click', e => {
   if (side === 'opp') {
     const id = slot.querySelector('.card').dataset.id;
     if (v.myTurn && ui.kind && ui.sel && ui.sel.type === 'field') {
+      sfx.play('tap');
       act({ t: 'attack', slot: ui.sel.slot, target: Number(slot.dataset.slot), kind: ui.kind });
       ui.sel = null; ui.kind = null; ui.peek = null;
       return;
@@ -569,42 +627,26 @@ document.addEventListener('click', e => {
     ui.peek = ui.peek === id ? null : id;
     return render();
   }
-  if (!v.myTurn) return;
+  if (!v.myTurn || side !== 'me') return;
   ui.peek = null; ui.kind = null;
-  if (side === 'me') {
-    const s = Number(slot.dataset.slot);
-    if (ui.sel && ui.sel.type === 'bench') {
-      const bc = v.me.bench.find(c => c.id === ui.sel.id);
-      if (bc && bc.grp !== E.slotGroup(s)) { toast(subMsg(bc.grp)); return; }
-      act({ t: 'swap', slot: s, benchId: ui.sel.id }); ui.sel = { type: 'field', slot: s }; return;
-    }
-    ui.sel = ui.sel && ui.sel.type === 'field' && ui.sel.slot === s ? null : { type: 'field', slot: s };
-  } else if (side === 'bench') {
-    const id = slot.dataset.id;
-    if (ui.sel && ui.sel.type === 'field') {
-      const s = ui.sel.slot, bc = v.me.bench.find(c => c.id === id);
-      if (bc && bc.grp !== E.slotGroup(s)) {
-        ui.sel = { type: 'bench', id }; render(); return;
-      }
-      act({ t: 'swap', slot: s, benchId: id }); ui.sel = { type: 'field', slot: s }; return;
-    }
-    ui.sel = ui.sel && ui.sel.id === id ? null : { type: 'bench', id };
-  }
+  const s = Number(slot.dataset.slot), c = v.me.field[s];
+  if (c && c.sta <= 0) { ui.sel = null; toast(`${c.name} is out of stamina.`); return render(); }
+  sfx.play('tap');
+  ui.sel = ui.sel && ui.sel.slot === s ? null : { type: 'field', slot: s };
   render();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { ui.sel = null; ui.kind = null; ui.peek = null; if (view) render(); }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('card')) { e.preventDefault(); e.target.click(); }
 });
-function subMsg(g) { return g === 'FC' ? 'Frontcourt players can only sub for frontcourt starters.' : 'Backcourt players can only sub for backcourt starters.'; }
 function onButton(k) {
   const v = view;
   if (k === 'auto') {
     ui.pick = E.bestFive([...v.me.bench]).map(c => c.id);
     render();
   } else if (k === 'lock') { act({ t: 'lineup', ids: ui.pick.slice() }); ui.pick = []; }
-  else if (k === 'inside' || k === 'outside') { ui.kind = k; render(); }
-  else if (k === 'cancel') { ui.kind = null; if (ui.sel && ui.sel.type === 'bench') ui.sel = null; render(); }
+  else if (k === 'inside' || k === 'outside') { sfx.play('tap'); ui.kind = k; render(); }
+  else if (k === 'cancel') { ui.kind = null; render(); }
   else if (k === 'end') { ui.sel = null; ui.kind = null; act({ t: 'end' }); }
   else if (k === 'again') { closeModal(); ctl && ctl.rematch(); }
   else if (k === 'menu') { closeModal(); leaveGame(); }
@@ -656,6 +698,7 @@ async function animAttack(ev, nextView) {
 
     const ar = aEl.getBoundingClientRect(), tr = tEl.getBoundingClientRect();
     const dx = (tr.left + tr.width / 2) - (ar.left + ar.width / 2), dy = (tr.top + tr.height / 2) - (ar.top + ar.height / 2);
+    sfx.play('whoosh');
     const lunge = aEl.animate([
       { transform: 'translate(0,-8px) scale(1)' },
       { transform: `translate(${dx * .8}px,${dy * .8}px) scale(1.12)`, offset: .5 },
@@ -664,33 +707,45 @@ async function animAttack(ev, nextView) {
     await wait(T(320));
 
     const res = co.querySelector('.res');
+    const short = ev.kind === 'inside' ? 'IN' : 'OUT', col = ev.kind === 'inside' ? 0 : 1;
     if (ev.result === 'score') {
       ring(tEl, '#ffb649');
       tEl.classList.add('shake');
-      res.textContent = `Bucket · ${ev.dmg} damage`; res.className = 'res ' + (mine ? 'good' : 'bad');
+      sfx.play('swish'); sfx.play('hit');
+      res.textContent = ev.open ? `Wide open · ${ev.dmg} to HP` : `Bucket · ${ev.dmg} damage`; res.className = 'res ' + (mine ? 'good' : 'bad');
       floater(`−${ev.dmg}`, 'bad', $(tSide === 'opp' ? '#oppHp' : '#myHp'));
       setHp(tSide, ev.hpAfter, view.hpMax);
       await lunge.finished.catch(() => {});
-      tEl.classList.remove('shake'); void tEl.offsetWidth;
-      tEl.classList.add('beaten');
-      await wait(T(650));
+      if (!ev.open) {
+        floater(`−${ev.defVal - ev.defAfter} ${short} DEF`, 'bad', tEl);
+        const d = tEl.querySelectorAll('.v.def')[col];
+        if (d) { d.textContent = ev.defAfter; d.classList.add(ev.defAfter === 0 ? 'zero' : 'hurt'); }
+      }
+      await wait(T(800));
+      tEl.classList.remove('shake');
     } else if (ev.result === 'blocked') {
       ring(tEl, '#a896ff');
+      sfx.play('block');
       res.textContent = `Stopped · −${ev.diff} ${ev.kind}`; res.className = 'res ' + (mine ? 'bad' : 'good');
       await lunge.finished.catch(() => {});
       aEl.classList.add('shake');
-      floater(`−${ev.diff} ${ev.kind === 'inside' ? 'IN' : 'OUT'}`, 'bad', aEl);
-      const vals = aEl.querySelectorAll('.v.atk');
-      const v = vals[ev.kind === 'inside' ? 0 : 1];
-      if (v) { v.textContent = ev.statAfter; v.classList.add('hurt'); }
+      floater(`−${ev.diff} ${short}`, 'bad', aEl);
+      const a = aEl.querySelectorAll('.v.atk')[col];
+      if (a) { a.textContent = ev.atkVal - ev.diff; a.classList.add('hurt'); }
       await wait(T(800));
     } else {
       ring(tEl, '#e8eef7');
+      sfx.play('tie');
       res.textContent = 'Stalemate'; res.className = 'res';
       await lunge.finished.catch(() => {});
       floater('Even', 'neutral', tEl);
       await wait(T(700));
     }
+    // fatigue: one stamina bar and 10% of every rating
+    floater(`−1 STA · ${ev.sta}/${E.STAMINA}`, 'neutral', aEl);
+    const pips = aEl.querySelector('.front .sta');
+    if (pips) pips.outerHTML = staHTML(ev.sta);
+    await wait(T(500));
     co.style.transition = 'opacity .25s'; co.style.opacity = '0';
     setTimeout(() => co.remove(), 260);
     aEl.classList.remove('attacking', 'shake');
@@ -706,16 +761,18 @@ async function banner(text, sub, mine) {
   setTimeout(() => b.remove(), 300);
 }
 function toast(msg) {
+  sfx.play('err');
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
 }
 function showOver() {
   closeModal();
-  const win = view.winner === view.you;
+  const draw = view.winner === -1, win = view.winner === view.you;
+  sfx.play(win ? 'win' : 'lose');
   const m = document.createElement('div'); m.className = 'modal'; m.id = 'overModal';
   m.innerHTML = `<div class="panel box"><span class="eyebrow">Final · turn ${view.turnNo}</span>
-    <h3 class="${win ? 'win' : 'lose'}">${win ? 'Victory' : 'Defeat'}</h3>
+    <h3 class="${win ? 'win' : 'lose'}">${draw ? 'Draw' : win ? 'Victory' : 'Defeat'}</h3>
     <p>${esc(view.me.name)} ${view.me.hp} HP · ${esc(view.opp.name)} ${view.opp.hp} HP</p>
     <div class="row" style="justify-content:center"><button class="btn ghost" data-act="menu">Menu</button><button class="btn primary" data-act="again">${ctl && ctl.online ? 'Ask for rematch' : 'Play again'}</button></div></div>`;
   document.body.appendChild(m);
@@ -728,6 +785,9 @@ function resetUi() { ui.sel = null; ui.kind = null; ui.pick = []; ui.peek = null
 function showGame() { $('#menu').hidden = true; $('#game').hidden = false; scrollTo(0, 0); }
 function leaveGame() { if (ctl) ctl.close(); ctl = null; closeModal(); $('#game').hidden = true; $('#menu').hidden = false; resetUi(); }
 $('#quit').addEventListener('click', leaveGame);
+function syncMute() { const b = $('#mute'); b.textContent = sfx.muted ? 'Sound off' : 'Sound on'; b.setAttribute('aria-pressed', String(sfx.muted)); }
+$('#mute').addEventListener('click', () => { sfx.toggle(); syncMute(); sfx.play('tap'); });
+syncMute();
 
 class LocalCtl {
   constructor(hp, saved) {
@@ -835,7 +895,7 @@ $('#fan').innerHTML = E.makeDeck(12).sort((a, b) => b.tier - a.tier).slice(0, 3)
 const hot = window.claude && window.claude.hot;
 if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => (ctl && !ctl.online && ctl.s ? { s: ctl.s, hp: ctl.hp } : {}));
 const boot = d => {
-  if (d && d.s && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
+  if (d && d.s && d.s.ver === 2 && d.s.phase && d.s.phase !== 'over') { resetUi(); showGame(); ctl = new LocalCtl(d.hp || 100, d.s); }
 };
 if (hot && typeof hot.ready === 'function') hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
 })();

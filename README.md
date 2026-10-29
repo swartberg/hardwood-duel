@@ -13,7 +13,9 @@ Open the address in two browsers. One player clicks **Create room** and shares t
 
 ## Hosting
 
-Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io, a VPS). Upload the folder, run `npm install` and `npm start`, and make sure the host passes the `PORT` environment variable. Behind HTTPS the page connects with `wss://` on its own.
+Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io, a VPS).
+
+**Render:** `render.yaml` describes the service. New service: in Render choose **New → Blueprint**, pick this repo, and apply. Existing service: make sure it deploys from `main` with build command `npm install` and start command `npm start`; with auto-deploy on, every push to `main` redeploys. Upload the folder, run `npm install` and `npm start`, and make sure the host passes the `PORT` environment variable. Behind HTTPS the page connects with `wss://` on its own.
 
 ## Files
 
@@ -26,7 +28,16 @@ Any host that runs Node 18+ and allows WebSockets works (Render, Railway, Fly.io
 - Starting HP: chosen on the menu (100 / 150 / 200 / custom).
 - `ARCH` — stat ranges per position (PG, SG, SF, PF, C).
 - `TIER_BONUS` — boost for All-Star (2) and MVP (3) cards.
-- `FIELD`, `DECK` — 5 starters, 12-card deck.
+- `FIELD`, `DECK` — 5 starters picked from a 12-card deck. The starting five is locked for the whole game.
+- `STAMINA`, `FATIGUE` — 5 stamina bars per card; each attack uses one and multiplies all four ratings by 0.9.
 - `botStep` — bot lineup and attack choices.
 
-At 100 HP a bot-vs-bot game lasts about 7 turns.
+## Rules in short
+
+- Beat a defender: the difference comes off their HP and off the defender's rating for that shot type.
+- A defender at 0 on that defense is wide open, so the full attack value hits HP.
+- Get stopped: the difference comes off your attacker's rating for that shot type.
+- If no starter on either side has stamina left, the higher HP wins (equal HP is a draw).
+- Both decks come from one shared pool, so the two players never hold the same name.
+
+At 100 HP a bot-vs-bot game lasts about 4 turns (150 HP: about 6, 200 HP: about 7).
